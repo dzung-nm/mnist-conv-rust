@@ -1,0 +1,7 @@
+/target
+
+.DS_Store
+*.idea
+
+# Ignore all .bin data files
+*.bin

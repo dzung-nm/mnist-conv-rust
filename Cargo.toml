@@ -1,0 +1,10 @@
+[package]
+name = "mnist-conv-rust"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ndarray = "0.17.2"
+rand = "0.10.1"
+zip = "8.6.0"
+byteorder = "1.5"
