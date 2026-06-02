@@ -1,14 +1,14 @@
-mod sigmoid;
 mod box_muller;
-mod unzip;
 mod load_mnist;
 mod network;
+mod sigmoid;
+mod unzip;
 
-use load_mnist::load_mnist;
+use crate::load_mnist::MnistData;
 use crate::network::*;
+use load_mnist::load_mnist;
 
 fn main() {
-    let data = load_mnist().expect("Failed to load MNIST dataset");
     let training_params = TrainingParams {
         max_epochs: 20,
         mini_batch_size: 10,
@@ -19,13 +19,33 @@ fn main() {
         stop_early_patience: Some(20),
         stop_early_min_delta: Some(0.1),
     };
+
     let network_options = NetworkOptions {
         sizes: vec![784, 30, 10],
         cost_function: CostFunctions::CrossEntropy,
         weight_init_method: WeightInitMethods::Xavier,
         training_params,
-        data,
     };
+
     let mut network = Network::new(network_options);
-    network.sdg();
+
+    let data = load_mnist().expect("Failed to load MNIST dataset");
+
+    let max = 1000;
+    let test_data = MnistData {
+        training: data.training.into_iter().take(max).collect(),
+        test: data.test.into_iter().take(max).collect(),
+        validation: data.validation.into_iter().take(max).collect(),
+    };
+
+    println!(
+        "Network initialized with sizes = {:?}, and cost function = {:?}, \
+        and weight initialization method = {:?}. {:?}",
+        network.options.sizes,
+        network.options.cost_function,
+        network.options.weight_init_method,
+        network.options.training_params
+    );
+
+    network.sdg(&test_data);
 }

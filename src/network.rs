@@ -1,22 +1,25 @@
-use std::time::{Duration, Instant};
-use ndarray::{Array2};
+use ndarray::Array2;
 use rand::seq::SliceRandom;
+use std::time::Instant;
 
 use crate::box_muller::box_muller_random;
-use crate::sigmoid::{sigmoid, sigmoid_prime};
 use crate::load_mnist::*;
+use crate::sigmoid::{sigmoid, sigmoid_prime};
 
+#[derive(Debug)]
 pub enum CostFunctions {
     Quadratic,
     CrossEntropy,
 }
 
+#[derive(Debug)]
 pub enum WeightInitMethods {
     Standard,
     Xavier,
     He,
 }
 
+#[derive(Debug)]
 pub struct TrainingParams {
     pub max_epochs: usize,
     pub mini_batch_size: usize,
@@ -33,11 +36,10 @@ pub struct NetworkOptions {
     pub cost_function: CostFunctions,
     pub weight_init_method: WeightInitMethods,
     pub training_params: TrainingParams,
-    pub data: MnistData,
 }
 
 pub struct Network {
-    options: NetworkOptions,
+    pub options: NetworkOptions,
     weights: Vec<Array2<f64>>,
     biases: Vec<Array2<f64>>,
     num_layers: usize,
@@ -117,11 +119,11 @@ impl Network {
 
         let mut delta = match self.options.cost_function {
             CostFunctions::CrossEntropy => {
-                last_activation - y // For cross-entropy cost function, the delta is just the output error
+                // For cross-entropy cost function, the delta is just the output error
+                last_activation - y
             }
-            // Default to quadratic cost function
-            // delta = (output - y) * sigmoidPrime(z)
-            _ => {
+            CostFunctions::Quadratic => {
+                // delta = (output - y) * sigmoidPrime(z)
                 (last_activation - y) * sigmoid_prime(&last_z)
             }
         };
@@ -140,14 +142,25 @@ impl Network {
         }
     }
 
-    pub fn update_mini_batch(&mut self, mini_batch: &Vec<&TrainingItem>) {
+    pub fn update_mini_batch(
+        &mut self,
+        mini_batch: &Vec<&TrainingItem>,
+        training_data_size: usize,
+    ) {
         let eta = self.options.training_params.eta;
         let r_l1 = self.options.training_params.regularization_l1;
         let r_l2 = self.options.training_params.regularization_l2;
-        let training_data_size = self.options.data.training.len() as f64;
 
-        let mut nabla_b = self.biases.iter().map(|b| Array2::zeros(b.dim())).collect::<Vec<_>>();
-        let mut nabla_w = self.weights.iter().map(|w| Array2::zeros(w.dim())).collect::<Vec<_>>();
+        let mut nabla_b = self
+            .biases
+            .iter()
+            .map(|b| Array2::zeros(b.dim()))
+            .collect::<Vec<_>>();
+        let mut nabla_w = self
+            .weights
+            .iter()
+            .map(|w| Array2::zeros(w.dim()))
+            .collect::<Vec<_>>();
 
         mini_batch.iter().for_each(|&item| {
             self.back_propagate(&item.0, &item.1, &mut nabla_b, &mut nabla_w);
@@ -158,32 +171,34 @@ impl Network {
             nabla_b[i].map_inplace(|nb| *nb *= eta_over_batch_size);
             nabla_w[i].map_inplace(|nw| *nw *= eta_over_batch_size);
             self.biases[i] -= &nabla_b[i];
-        }
 
-        // Apply regularization to weights before updating
-        if r_l1 != None || r_l2 != None {
-            // Apply both L1 and L2 regularization
-            let weight_decay = 1.0 - (eta * r_l2.unwrap()) / training_data_size;
-            self.weights[i].map_inplace(|w| {
-                *w = *w * weight_decay - eta * r_l1.unwrap() * w.signum() / training_data_size;
-            });
-        } else if r_l2 != None {
-            // Apply L2 regularization only
-            let weight_decay = 1.0 - (eta * r_l2.unwrap()) / training_data_size;
-            self.weights[i].map_inplace(|w| *w *= weight_decay);
-        } else if r_l1 != None {
-            // Apply L1 regularization only
-            self.weights[i].map_inplace(|w| {
-                *w -= eta * r_l1.unwrap() * w.signum() / training_data_size;
-            });
-        }
+            let data_size = training_data_size as f64;
 
-        self.weights[i] -= &nabla_w[i];
+            // Apply regularization to weights before updating
+            if r_l1.is_some() && r_l2.is_some() {
+                // Apply both L1 and L2 regularization
+                let weight_decay = 1.0 - (eta * r_l2.unwrap()) / data_size;
+                self.weights[i].map_inplace(|w| {
+                    *w = *w * weight_decay - eta * r_l1.unwrap() * w.signum() / data_size;
+                });
+            } else if r_l2.is_some() {
+                // Apply L2 regularization only
+                let weight_decay = 1.0 - (eta * r_l2.unwrap()) / data_size;
+                self.weights[i].map_inplace(|w| *w *= weight_decay);
+            } else if r_l1.is_some() {
+                // Apply L1 regularization only
+                self.weights[i].map_inplace(|w| {
+                    *w -= eta * r_l1.unwrap() * w.signum() / data_size;
+                });
+            }
+
+            self.weights[i] -= &nabla_w[i];
+        }
     }
 
     fn feed_forward(&self, x: &Array2<f64>) -> Array2<f64> {
         let mut activation = x.clone();
-        for i in 0..self.num_layers-1 {
+        for i in 0..self.num_layers - 1 {
             let z = self.weights[i].dot(&activation) + &self.biases[i];
             activation = sigmoid(&z);
         }
@@ -191,7 +206,8 @@ impl Network {
     }
 
     fn evaluate_on_training_data(&self, training_data: &Vec<TrainingItem>) -> usize {
-        let training_results = training_data.iter()
+        let training_results = training_data
+            .iter()
             .map(|item| {
                 let output = self.feed_forward(&item.0);
                 let data = output.iter().cloned().collect::<Vec<f64>>();
@@ -202,11 +218,12 @@ impl Network {
             .filter(|&is_correct| is_correct)
             .count();
 
-         training_results
+        training_results
     }
 
     fn evaluate_on_test_data(&self, test_data: &Vec<TestItem>) -> usize {
-        let test_results = test_data.iter()
+        let test_results = test_data
+            .iter()
             .map(|item| {
                 let output = self.feed_forward(&item.0);
                 let data = output.iter().cloned().collect::<Vec<f64>>();
@@ -216,36 +233,40 @@ impl Network {
             .filter(|&is_correct| is_correct)
             .count();
 
-         test_results
+        test_results
     }
 
-    fn calculate_accuracy_and_log(&mut self, epoch: usize, time_taken: f64) {
-        let training_data = &self.options.data.training;
-        let validation_data = &self.options.data.validation;
-        let test_data = &self.options.data.test;
+    fn calculate_accuracy_and_log(&mut self, epoch: usize, time_taken: f64, data: &MnistData) {
+        let training_data = &data.training;
+        let validation_data = &data.validation;
+        let test_data = &data.test;
 
         let training_results = self.evaluate_on_training_data(&training_data);
         let training_accuracy = (training_results as f64 / training_data.len() as f64) * 100.0;
         self.training_accuracies.push(training_accuracy);
 
         let validation_results = self.evaluate_on_test_data(&validation_data);
-        let validation_accuracy = (validation_results as f64 / validation_data.len() as f64) * 100.0;
+        let validation_accuracy =
+            (validation_results as f64 / validation_data.len() as f64) * 100.0;
+        let is_new_validation_record = self.validation_accuracies.len() == 0
+            || validation_accuracy > arr_max(&self.validation_accuracies);
         self.validation_accuracies.push(validation_accuracy);
-        let is_new_validation_record = self.validation_accuracies.len() == 0 ||
-            validation_accuracy > arr_max(&self.validation_accuracies);
 
         let test_results = self.evaluate_on_test_data(&test_data);
         let test_accuracy = (test_results as f64 / test_data.len() as f64) * 100.0;
         self.test_accuracies.push(test_accuracy);
 
         let validation_label = if is_new_validation_record {
-            format!("\x1b[92m\x1b[1mValidation Accuracy: ${:.2}%\x1b[0m", validation_accuracy)
+            format!(
+                "\x1b[92m\x1b[1mValidation Accuracy: ${:.2}%\x1b[0m",
+                validation_accuracy
+            )
         } else {
             format!("Validation Accuracy: {:.2}%", validation_accuracy)
         };
         println!(
             "Epoch {:03}: time = {:.3}s, Training Accuracy: {:.2}%, {}, \x1b[90mTest Accuracy: {:.2}%\x1b[0m",
-            (epoch + 1).to_string(),
+            epoch + 1,
             time_taken,
             training_accuracy,
             validation_label,
@@ -254,17 +275,30 @@ impl Network {
     }
 
     fn should_stop_early(&self, accuracies: &Vec<f64>) -> bool {
-        let patience = self.options.training_params.stop_early_patience.unwrap_or_else(|| 20);
-        let min_delta = self.options.training_params.stop_early_min_delta.unwrap_or_else(|| 0.1);
+        let patience = self
+            .options
+            .training_params
+            .stop_early_patience
+            .unwrap_or_else(|| 20);
+        let min_delta = self
+            .options
+            .training_params
+            .stop_early_min_delta
+            .unwrap_or_else(|| 0.1);
 
         if accuracies.len() <= patience {
             return false;
         }
 
         let recent_accuracies = &accuracies[accuracies.len() - patience..];
-        let max_recent_accuracy = recent_accuracies.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
-        let previous_max_accuracy = accuracies[..accuracies.len() - patience].iter()
-            .max_by(|a, b| a.total_cmp(b)).unwrap();
+        let max_recent_accuracy = recent_accuracies
+            .iter()
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap();
+        let previous_max_accuracy = accuracies[..accuracies.len() - patience]
+            .iter()
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap();
 
         if *max_recent_accuracy < *previous_max_accuracy + min_delta {
             println!(
@@ -279,12 +313,14 @@ impl Network {
         false
     }
 
-    pub fn sdg(&mut self) {
+    pub fn sdg(&mut self, data: &MnistData) {
         let training_params = &self.options.training_params;
         let max_epochs = training_params.max_epochs;
         let mini_batch_size = training_params.mini_batch_size;
         let stop_early = training_params.stop_early;
-        let training_data = &self.options.data.training;
+
+        let training_data = &data.training;
+        let training_data_size = training_data.len();
 
         self.training_accuracies.clear();
         self.validation_accuracies.clear();
@@ -297,18 +333,23 @@ impl Network {
 
             indices.shuffle(&mut rand::rng());
 
-            let mini_batches = indices.chunks_exact(mini_batch_size)
+            let mini_batches = indices
+                .chunks_exact(mini_batch_size)
                 .map(|indices_batch| {
-                    indices_batch.iter().map(|&i| &training_data[i]).collect::<Vec<_>>()
+                    indices_batch
+                        .iter()
+                        .map(|&i| &training_data[i])
+                        .collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
 
-            mini_batches.iter().for_each(|mini_batch| self.update_mini_batch(mini_batch));
+            mini_batches
+                .iter()
+                .for_each(|mini_batch| self.update_mini_batch(mini_batch, training_data_size));
 
-            println!("Epoch {}", epoch);
             let time_taken = start.elapsed();
 
-            self.calculate_accuracy_and_log(epoch, time_taken.as_secs_f64());
+            self.calculate_accuracy_and_log(epoch, time_taken.as_secs_f64(), &data);
 
             if stop_early && self.should_stop_early(&self.validation_accuracies) {
                 break;
