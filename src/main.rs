@@ -1,8 +1,11 @@
+extern crate blas_src;
+
 mod box_muller;
 mod load_mnist;
-mod network;
 mod sigmoid;
 mod unzip;
+
+pub mod network;
 
 use crate::load_mnist::MnistData;
 use crate::network::*;
@@ -31,7 +34,7 @@ fn main() {
 
     let data = load_mnist().expect("Failed to load MNIST dataset");
 
-    let max = 1000;
+    let max = 50000;
     let test_data = MnistData {
         training: data.training.into_iter().take(max).collect(),
         test: data.test.into_iter().take(max).collect(),

@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ndarray = "0.17.2"
 rand = "0.10.1"
 zip = "8.6.0"
 byteorder = "1.5"
+ndarray = { version = "0.17.2", features = ["blas"] }
+blas-src = { version = "0.14.0", features = ["accelerate"] }
+# For Linux/Windows you can use Intel MKL instead:
+# blas-src = { version = "0.14.0", features = ["intel-mkl"] }

@@ -107,8 +107,8 @@ impl Network {
         let mut zs: Vec<Array2<f64>> = Vec::new();
         for i in 0..self.num_layers - 1 {
             let a = if i == 0 { x } else { &activations[i - 1] };
-            // z = w * a + b
-            let z = self.weights[i].dot(a) + &self.biases[i]; // Todo: need to activate Blas
+            // z = w * a + b (using BLAS-accelerated matrix multiplication)
+            let z = self.weights[i].dot(a) + &self.biases[i];
             activations.push(sigmoid(&z));
             zs.push(z);
         }
