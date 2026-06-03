@@ -5,7 +5,7 @@ use std::time::Instant;
 use crate::box_muller::box_muller_random;
 use crate::load_mnist::*;
 use crate::sigmoid::{sigmoid, sigmoid_prime};
-use crate::utils::arr_max;
+use crate::utils::{arr_max, create_zero_copy};
 
 #[derive(Debug)]
 pub enum CostFunctions {
@@ -148,16 +148,8 @@ impl Network {
         let r_l1 = self.options.training_params.regularization_l1;
         let r_l2 = self.options.training_params.regularization_l2;
 
-        let mut nabla_b = self
-            .biases
-            .iter()
-            .map(|b| Array2::zeros(b.dim()))
-            .collect::<Vec<_>>();
-        let mut nabla_w = self
-            .weights
-            .iter()
-            .map(|w| Array2::zeros(w.dim()))
-            .collect::<Vec<_>>();
+        let mut nabla_b = create_zero_copy(&self.biases);
+        let mut nabla_w = create_zero_copy(&self.weights);
 
         mini_batch.iter().for_each(|&item| {
             self.back_propagate(&item.0, &item.1, &mut nabla_b, &mut nabla_w);
@@ -203,7 +195,7 @@ impl Network {
     }
 
     fn evaluate_on_training_data(&self, training_data: &Vec<TrainingItem>) -> usize {
-        let training_results = training_data
+        training_data
             .iter()
             .map(|item| {
                 let output = self.feed_forward(&item.0);
@@ -213,13 +205,11 @@ impl Network {
                 predicted == actual
             })
             .filter(|&is_correct| is_correct)
-            .count();
-
-        training_results
+            .count()
     }
 
     fn evaluate_on_test_data(&self, test_data: &Vec<TestItem>) -> usize {
-        let test_results = test_data
+        test_data
             .iter()
             .map(|item| {
                 let output = self.feed_forward(&item.0);
@@ -228,9 +218,7 @@ impl Network {
                 predicted == item.1 as usize
             })
             .filter(|&is_correct| is_correct)
-            .count();
-
-        test_results
+            .count()
     }
 
     fn calculate_accuracy_and_log(&mut self, epoch: usize, time_taken: f64, data: &MnistData) {
@@ -262,7 +250,8 @@ impl Network {
             format!("Validation Accuracy: {:.2}%", validation_accuracy)
         };
         println!(
-            "Epoch {:03}: time = {:.3}s, Training Accuracy: {:.2}%, {}, \x1b[90mTest Accuracy: {:.2}%\x1b[0m",
+            "Epoch {:03}: time = {:.3}s, Training Accuracy: {:.2}%, {}, \x1b[90m\
+            Test Accuracy: {:.2}%\x1b[0m",
             epoch + 1,
             time_taken,
             training_accuracy,
