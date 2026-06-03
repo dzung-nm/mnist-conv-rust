@@ -4,6 +4,7 @@ mod box_muller;
 mod load_mnist;
 mod sigmoid;
 mod unzip;
+mod utils;
 
 pub mod network;
 
@@ -13,7 +14,7 @@ use load_mnist::load_mnist;
 
 fn main() {
     let training_params = TrainingParams {
-        max_epochs: 20,
+        max_epochs: 10,
         mini_batch_size: 10,
         eta: 0.5,
         regularization_l1: None,

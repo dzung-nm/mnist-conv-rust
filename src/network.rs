@@ -5,6 +5,7 @@ use std::time::Instant;
 use crate::box_muller::box_muller_random;
 use crate::load_mnist::*;
 use crate::sigmoid::{sigmoid, sigmoid_prime};
+use crate::utils::arr_max;
 
 #[derive(Debug)]
 pub enum CostFunctions {
@@ -48,10 +49,6 @@ pub struct Network {
     training_accuracies: Vec<f64>,
     validation_accuracies: Vec<f64>,
     test_accuracies: Vec<f64>,
-}
-
-fn arr_max(a: &Vec<f64>) -> f64 {
-    a.iter().max_by(|x, y| x.total_cmp(y)).unwrap().clone()
 }
 
 impl Network {
@@ -290,21 +287,16 @@ impl Network {
             return false;
         }
 
-        let recent_accuracies = &accuracies[accuracies.len() - patience..];
-        let max_recent_accuracy = recent_accuracies
-            .iter()
-            .max_by(|a, b| a.total_cmp(b))
-            .unwrap();
-        let previous_max_accuracy = accuracies[..accuracies.len() - patience]
-            .iter()
-            .max_by(|a, b| a.total_cmp(b))
-            .unwrap();
+        let recent_accuracies = accuracies[accuracies.len() - patience..].to_vec();
+        let recent_max = arr_max(&recent_accuracies);
+        let previous_max = arr_max(&accuracies[..accuracies.len() - patience].to_vec());
 
-        if *max_recent_accuracy < *previous_max_accuracy + min_delta {
+        if recent_max < previous_max + min_delta {
             println!(
-                "Early stopping triggered: max recent accuracy ({:.4}%) did not improve over previous max accuracy ({:.4}%) by at least {:.4}%",
-                max_recent_accuracy * 100.0,
-                previous_max_accuracy * 100.0,
+                "Early stopping triggered: max recent accuracy ({:.4}%) did not improve over \
+                previous max accuracy ({:.4}%) by at least {:.4}%",
+                recent_max * 100.0,
+                previous_max * 100.0,
                 min_delta * 100.0
             );
             return true;
@@ -326,7 +318,7 @@ impl Network {
         self.validation_accuracies.clear();
         self.test_accuracies.clear();
 
-        let mut indices: Vec<usize> = (0..training_data.len()).collect();
+        let mut indices: Vec<usize> = (0..training_data_size).collect();
 
         for epoch in 0..max_epochs {
             let start = Instant::now();
@@ -336,10 +328,7 @@ impl Network {
             let mini_batches = indices
                 .chunks_exact(mini_batch_size)
                 .map(|indices_batch| {
-                    indices_batch
-                        .iter()
-                        .map(|&i| &training_data[i])
-                        .collect::<Vec<_>>()
+                    indices_batch.iter().map(|&i| &training_data[i]).collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
 
@@ -348,7 +337,6 @@ impl Network {
                 .for_each(|mini_batch| self.update_mini_batch(mini_batch, training_data_size));
 
             let time_taken = start.elapsed();
-
             self.calculate_accuracy_and_log(epoch, time_taken.as_secs_f64(), &data);
 
             if stop_early && self.should_stop_early(&self.validation_accuracies) {
