@@ -68,6 +68,7 @@ pub trait Layer {
     fn get_name(&self) -> String;
     fn get_type(&self) -> LayerTypes;
     fn activate(&self, weights: &Array2<f64>) -> Array2<f64>;
+    fn activate_prime(&self, weights: &Array2<f64>) -> Array2<f64>;
 }
 
 pub struct FullyConnectedLayer {
@@ -98,6 +99,9 @@ impl Layer for FullyConnectedLayer {
     fn activate(&self, weights: &Array2<f64>) -> Array2<f64> {
         sigmoid(weights)
     }
+    fn activate_prime(&self, weights: &Array2<f64>) -> Array2<f64> {
+        sigmoid_prime(weights)
+    }
 }
 
 pub struct SoftmaxLayer {
@@ -127,6 +131,11 @@ impl Layer for SoftmaxLayer {
     }
     fn activate(&self, weights: &Array2<f64>) -> Array2<f64> {
         softmax(weights)
+    }
+    fn activate_prime(&self, weights: &Array2<f64>) -> Array2<f64> {
+        // In fact, a softmax layer must be the last layer of a network,
+        // so we won't actually use this function. But we need to implement it to satisfy the trait.
+        Array2::from_shape_fn(weights.dim(), |_| 1.0)
     }
 }
 
@@ -277,7 +286,8 @@ impl Network {
             if l > 0 {
                 let w_transpose = layer_base.weights.t();
                 let z_prev = &zs[l - 1];
-                let sp = sigmoid_prime(&z_prev);
+                let prev_layer = &self.options.layers[l - 1];
+                let sp = prev_layer.activate_prime(&z_prev);
                 delta = w_transpose.dot(&delta) * sp;
             }
         }
