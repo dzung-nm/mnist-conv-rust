@@ -177,6 +177,13 @@ impl Network {
             }
         }
 
+        // If a layer is a Softmax layer, it should be the final layer
+        for i in 0..layers.len() - 1 {
+            if layers[i].get_name() == "SoftmaxLayer" {
+                panic!("Softmax layer must be the final layer in the network");
+            }
+        }
+
         Network {
             options,
             training_accuracies: Vec::new(),
@@ -517,6 +524,27 @@ mod tests {
                 Box::new(SoftmaxLayer::new(101, 10, WeightInitMethods::Xavier)),
             ],
             cost_function: CostFunctions::CrossEntropy,
+            max_epochs: 10,
+            mini_batch_size: 10,
+            eta: 0.1,
+            regularization_l1: None,
+            regularization_l2: Some(5.0),
+            stop_early: true,
+            stop_early_patience: 20,
+            stop_early_min_delta: 0.1,
+        };
+        Network::new(options);
+    }
+
+    #[test]
+    #[should_panic = "Softmax layer must be the final layer in the network"]
+    fn test_softmax_not_match() {
+        let options = NetworkOptions {
+            layers: vec![
+                Box::new(SoftmaxLayer::new(784, 100, WeightInitMethods::Xavier)),
+                Box::new(SoftmaxLayer::new(100, 10, WeightInitMethods::Xavier)),
+            ],
+            cost_function: CostFunctions::Quadratic,
             max_epochs: 10,
             mini_batch_size: 10,
             eta: 0.1,
