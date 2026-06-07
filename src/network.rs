@@ -7,7 +7,7 @@ use crate::box_muller::box_muller_random;
 use crate::sigmoid::{sigmoid, sigmoid_prime};
 use crate::softmax::softmax;
 use crate::types::{Dataset, TestItem, TrainingItem};
-use crate::utils::arr_max;
+use crate::utils::*;
 
 #[derive(Debug)]
 pub enum CostFunctions {
@@ -267,7 +267,8 @@ impl Network {
 
         let mut delta = match self.cost_function {
             CostFunctions::CrossEntropy => {
-                // For cross-entropy cost function, the delta is just the output error
+                // For cross-entropy cost with softmax, delta is the difference activation - target
+                // This is simplified because softmax derivative cancels out with cross-entropy gradient
                 last_activation - y
             }
             CostFunctions::Quadratic => {
@@ -353,8 +354,7 @@ impl Network {
             .iter()
             .map(|item| {
                 let output = self.feed_forward(&item.0);
-                let data = output.iter().cloned().collect::<Vec<f64>>();
-                let predicted = data.iter().position(|&v| v == arr_max(&data)).unwrap();
+                let predicted = get_predicted_label(&output);
                 let actual = item.1.iter().position(|&v| v == 1.0).unwrap();
                 predicted == actual
             })
@@ -367,8 +367,7 @@ impl Network {
             .iter()
             .map(|item| {
                 let output = self.feed_forward(&item.0);
-                let data = output.iter().cloned().collect::<Vec<f64>>();
-                let predicted = data.iter().position(|&v| v == arr_max(&data)).unwrap();
+                let predicted = get_predicted_label(&output);
                 predicted == item.1 as usize
             })
             .filter(|&is_correct| is_correct)
@@ -387,7 +386,7 @@ impl Network {
         let validation_results = self.evaluate_on_test_data(&validation_data);
         let validation_accuracy =
             (validation_results as f64 / validation_data.len() as f64) * 100.0;
-        let is_new_validation_record = self.validation_accuracies.len() == 0
+        let is_new_validation_record = self.validation_accuracies.is_empty()
             || validation_accuracy > arr_max(&self.validation_accuracies);
         self.validation_accuracies.push(validation_accuracy);
 
@@ -422,9 +421,9 @@ impl Network {
             return false;
         }
 
-        let recent_accuracies = accuracies[accuracies.len() - patience..].to_vec();
-        let recent_max = arr_max(&recent_accuracies);
-        let previous_max = arr_max(&accuracies[..accuracies.len() - patience].to_vec());
+        let recent_accuracies = &accuracies[accuracies.len() - patience..];
+        let recent_max = slice_max(recent_accuracies);
+        let previous_max = slice_max(&accuracies[..accuracies.len() - patience]);
 
         if recent_max < previous_max + min_delta {
             println!(
@@ -458,7 +457,7 @@ impl Network {
             indices.shuffle(&mut rand::rng());
 
             let mini_batches = indices
-                .chunks_exact(mini_batch_size)
+                .chunks(mini_batch_size)
                 .map(|indices_batch| {
                     indices_batch
                         .iter()
