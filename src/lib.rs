@@ -2,6 +2,7 @@ extern crate blas_src;
 
 mod box_muller;
 mod sigmoid;
+mod softmax;
 mod utils;
 
 pub mod types;
