@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use crate::box_muller::box_muller_random;
 use crate::sigmoid::{sigmoid, sigmoid_prime};
+use crate::softmax::softmax;
 use crate::types::{Dataset, TestItem, TrainingItem};
 use crate::utils::arr_max;
 
@@ -58,6 +59,7 @@ pub trait Layer {
     fn get_base(&self) -> &BaseLayer;
     fn get_base_mut(&mut self) -> &mut BaseLayer;
     fn get_name(&self) -> String;
+    fn activate(&self, weights: &Array2<f64>) -> Array2<f64>;
 }
 
 pub struct FullyConnectedLayer {
@@ -82,6 +84,9 @@ impl Layer for FullyConnectedLayer {
     fn get_name(&self) -> String {
         "FullyConnectedLayer".to_string()
     }
+    fn activate(&self, weights: &Array2<f64>) -> Array2<f64> {
+        sigmoid(weights)
+    }
 }
 
 pub struct SoftmaxLayer {
@@ -105,6 +110,9 @@ impl Layer for SoftmaxLayer {
     }
     fn get_name(&self) -> String {
         "SoftmaxLayer".to_string()
+    }
+    fn activate(&self, weights: &Array2<f64>) -> Array2<f64> {
+        softmax(weights)
     }
 }
 
@@ -214,11 +222,12 @@ impl Network {
         let mut activations: Vec<Array2<f64>> = Vec::new();
         let mut zs: Vec<Array2<f64>> = Vec::new();
         for i in 0..self.options.layers.len() {
-            let layer = &self.options.layers[i].get_base();
+            let layer = &self.options.layers[i];
+            let layer_base = layer.get_base();
             let a = if i == 0 { x } else { &activations[i - 1] };
             // z = w * a + b (using BLAS-accelerated matrix multiplication)
-            let z = layer.weights.dot(a) + &layer.biases;
-            activations.push(sigmoid(&z));
+            let z = layer_base.weights.dot(a) + &layer_base.biases;
+            activations.push(layer.activate(&z));
             zs.push(z);
         }
 
@@ -238,14 +247,14 @@ impl Network {
         };
 
         for l in (0..self.options.layers.len()).rev() {
-            let layer = &self.options.layers[l].get_base();
+            let layer_base = &self.options.layers[l].get_base();
 
             let a_prev = if l == 0 { x } else { &activations[l - 1] };
             self.nabla_b[l] += &delta;
             self.nabla_w[l] += &delta.dot(&a_prev.t());
 
             if l > 0 {
-                let w_transpose = layer.weights.t();
+                let w_transpose = layer_base.weights.t();
                 let z_prev = &zs[l - 1];
                 let sp = sigmoid_prime(&z_prev);
                 delta = w_transpose.dot(&delta) * sp;
@@ -266,12 +275,12 @@ impl Network {
         });
 
         for i in 0..self.options.layers.len() {
-            let layer = &mut self.options.layers[i].get_base_mut();
+            let layer_base = &mut self.options.layers[i].get_base_mut();
 
             let eta_over_batch_size = eta / mini_batch.len() as f64;
             self.nabla_b[i].map_inplace(|nb| *nb *= eta_over_batch_size);
             self.nabla_w[i].map_inplace(|nw| *nw *= eta_over_batch_size);
-            layer.biases -= &self.nabla_b[i];
+            layer_base.biases -= &self.nabla_b[i];
 
             let data_size = training_data_size as f64;
 
@@ -279,30 +288,31 @@ impl Network {
             if r_l1.is_some() && r_l2.is_some() {
                 // Apply both L1 and L2 regularization
                 let weight_decay = 1.0 - (eta * r_l2.unwrap()) / data_size;
-                layer.weights.map_inplace(|w| {
+                layer_base.weights.map_inplace(|w| {
                     *w = *w * weight_decay - eta * r_l1.unwrap() * w.signum() / data_size;
                 });
             } else if r_l2.is_some() {
                 // Apply L2 regularization only
                 let weight_decay = 1.0 - (eta * r_l2.unwrap()) / data_size;
-                layer.weights.map_inplace(|w| *w *= weight_decay);
+                layer_base.weights.map_inplace(|w| *w *= weight_decay);
             } else if r_l1.is_some() {
                 // Apply L1 regularization only
-                layer.weights.map_inplace(|w| {
+                layer_base.weights.map_inplace(|w| {
                     *w -= eta * r_l1.unwrap() * w.signum() / data_size;
                 });
             }
 
-            layer.weights -= &self.nabla_w[i];
+            layer_base.weights -= &self.nabla_w[i];
         }
     }
 
     fn feed_forward(&self, x: &Array2<f64>) -> Array2<f64> {
         let mut activation = x.clone();
         for i in 0..self.options.layers.len() {
-            let layer = &self.options.layers[i].get_base();
-            let z = layer.weights.dot(&activation) + &layer.biases;
-            activation = sigmoid(&z);
+            let layer = &self.options.layers[i];
+            let layer_base = layer.get_base();
+            let z = layer_base.weights.dot(&activation) + &layer_base.biases;
+            activation = layer.activate(&z);
         }
         activation
     }
