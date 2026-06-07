@@ -3,7 +3,6 @@ mod load_mnist;
 
 use mnist_conv_rust::types::Dataset;
 use mnist_conv_rust::network::*;
-
 use crate::load_mnist::load_mnist;
 
 fn main() {
@@ -25,8 +24,9 @@ fn main() {
 
     let network_options = NetworkOptions {
         layers: vec![
-            Box::new(FullyConnectedLayer::new(784, 100, WeightInitMethods::Xavier)),
-            Box::new(SoftmaxLayer::new(100, 10, WeightInitMethods::Xavier)),
+            Box::new(SigmoidLayer::new(784, 30, WeightInitMethods::Xavier)),
+            Box::new(SigmoidLayer::new(30, 30, WeightInitMethods::Xavier)),
+            Box::new(SoftmaxLayer::new(30, 10, WeightInitMethods::Xavier)),
         ],
         max_epochs: 100,
         mini_batch_size: 10,

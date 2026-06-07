@@ -24,7 +24,7 @@ pub enum WeightInitMethods {
 
 #[derive(Debug, PartialEq)]
 pub enum LayerTypes {
-    FullyConnected,
+    Sigmoid,
     Softmax,
 }
 
@@ -71,19 +71,19 @@ pub trait Layer {
     fn activate_prime(&self, weights: &Array2<f64>) -> Array2<f64>;
 }
 
-pub struct FullyConnectedLayer {
+pub struct SigmoidLayer {
     base: BaseLayer,
 }
 
-impl FullyConnectedLayer {
+impl SigmoidLayer {
     pub fn new(input_size: usize, output_size: usize, method: WeightInitMethods) -> Self {
-        FullyConnectedLayer {
+        SigmoidLayer {
             base: BaseLayer::new(input_size, output_size, method),
         }
     }
 }
 
-impl Layer for FullyConnectedLayer {
+impl Layer for SigmoidLayer {
     fn get_base(&self) -> &BaseLayer {
         &self.base
     }
@@ -91,10 +91,10 @@ impl Layer for FullyConnectedLayer {
         &mut self.base
     }
     fn get_name(&self) -> String {
-        "FullyConnectedLayer".to_string()
+        "SigmoidLayer".to_string()
     }
     fn get_type(&self) -> LayerTypes {
-        LayerTypes::FullyConnected
+        LayerTypes::Sigmoid
     }
     fn activate(&self, weights: &Array2<f64>) -> Array2<f64> {
         sigmoid(weights)
@@ -489,11 +489,7 @@ mod tests {
     fn test_network_initialization() {
         let options = NetworkOptions {
             layers: vec![
-                Box::new(FullyConnectedLayer::new(
-                    784,
-                    100,
-                    WeightInitMethods::Xavier,
-                )),
+                Box::new(SigmoidLayer::new(784, 100, WeightInitMethods::Xavier)),
                 Box::new(SoftmaxLayer::new(100, 10, WeightInitMethods::Xavier)),
             ],
             max_epochs: 10,
@@ -544,11 +540,7 @@ mod tests {
     fn test_input_output_not_match() {
         let options = NetworkOptions {
             layers: vec![
-                Box::new(FullyConnectedLayer::new(
-                    784,
-                    100,
-                    WeightInitMethods::Xavier,
-                )),
+                Box::new(SigmoidLayer::new(784, 100, WeightInitMethods::Xavier)),
                 Box::new(SoftmaxLayer::new(101, 10, WeightInitMethods::Xavier)),
             ],
             max_epochs: 10,
