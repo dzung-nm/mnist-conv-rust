@@ -1,5 +1,6 @@
 [package]
 name = "mnist-conv-rust"
+description = "A simple convolutional neural network implementation in Rust for the MNIST dataset."
 version = "0.1.0"
 edition = "2024"
 authors = ["Dzung Nguyen Mau"]
