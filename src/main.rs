@@ -1,7 +1,7 @@
 use mnist_conv_rust::load_mnist;
 use mnist_conv_rust::Layer;
 use mnist_conv_rust::conv_layer::{ConvLayer, ConvLayerConfig};
-use mnist_conv_rust::max_pool_layer::{MaxPoolLayer, MaxPoolLayerConfig};
+use mnist_conv_rust::max_pool_layer::{MaxPoolLayer, PoolLayerConfig};
 use mnist_conv_rust::network::*;
 use mnist_conv_rust::sigmoid_layer::SigmoidLayer;
 use mnist_conv_rust::softmax_layer::SoftmaxLayer;
@@ -40,7 +40,7 @@ fn main() {
         padding: 0,
     };
     
-    let max_pool_layer_config = MaxPoolLayerConfig {
+    let max_pool_layer_config = PoolLayerConfig {
         input: (6, 24, 24),
         pool_size: (2, 2),
         stride: 2,

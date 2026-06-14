@@ -13,7 +13,7 @@ pub fn lenet5() -> Network {
         stride: 1,
         padding: 2,
     };
-    let max_pool_layer_config1 = MaxPoolLayerConfig {
+    let pool_layer_config1 = PoolLayerConfig {
         input: (6, 28, 28),
         pool_size: (2, 2),
         stride: 2,
@@ -26,7 +26,7 @@ pub fn lenet5() -> Network {
         stride: 1,
         padding: 0,
     };
-    let max_pool_layer_config2 = MaxPoolLayerConfig {
+    let pool_layer_config2 = PoolLayerConfig {
         input: (16, 10, 10),
         pool_size: (2, 2),
         stride: 2,
@@ -34,9 +34,9 @@ pub fn lenet5() -> Network {
 
     let layers: Vec<Box<dyn Layer>> = vec![
         Box::new(ConvLayer::new(&conv_layer_config1)), // → 6×28×28
-        Box::new(MaxPoolLayer::new(&max_pool_layer_config1)), // → 6×14×14
+        Box::new(MaxPoolLayer::new(&pool_layer_config1)), // → 6×14×14
         Box::new(ConvLayer::new(&conv_layer_config2)), // → 16×10×10
-        Box::new(MaxPoolLayer::new(&max_pool_layer_config2)), // → 16×5×5
+        Box::new(MaxPoolLayer::new(&pool_layer_config2)), // → 16×5×5
         Box::new(SigmoidLayer::new(16 * 5 * 5, 120)),
         Box::new(SigmoidLayer::new(120, 84)),
         Box::new(SoftmaxLayer::new(84, 10)),

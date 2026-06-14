@@ -6,6 +6,7 @@ pub enum LayerTypes {
     Softmax,
     Conv,
     MaxPool,
+    AveragePool,
 }
 
 pub struct LayerData {
