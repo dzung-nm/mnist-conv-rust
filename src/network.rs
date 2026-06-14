@@ -17,8 +17,8 @@ pub struct NetOptions {
     pub max_epochs: usize,
     pub mini_batch_size: usize,
     pub eta: f64,
-    pub regularization_l1: Option<f64>,
-    pub regularization_l2: Option<f64>,
+    pub regularization_l1: f64,
+    pub regularization_l2: f64,
     pub stop_early: bool,
     pub stop_early_patience: usize,
     pub stop_early_min_delta: f64,
@@ -47,8 +47,8 @@ impl Default for NetOptions {
             max_epochs: 100,
             mini_batch_size: 10,
             eta: 0.1,
-            regularization_l1: None,
-            regularization_l2: Some(5.0),
+            regularization_l1: 0.0,
+            regularization_l2: 0.0,
             stop_early: true,
             stop_early_patience: 20,
             stop_early_min_delta: 0.1,
@@ -202,20 +202,22 @@ impl Network {
             base.biases -= &db;
 
             // Regularization applied to weights before the gradient step
-            if r_l1.is_some() && r_l2.is_some() {
+            if r_l1 > 0.0 && r_l2 > 0.0 {
                 // Apply both L1 and L2 regularization
-                let weight_decay = 1.0 - (eta * r_l2.unwrap()) / data_size;
+                let weight_decay = 1.0 - (eta * r_l2) / data_size;
+                let l1_step = (eta * r_l1) / data_size;
                 base.weights.map_inplace(|w| {
-                    *w = *w * weight_decay - eta * r_l1.unwrap() * w.signum() / data_size;
+                    *w = *w * weight_decay - l1_step * w.signum();
                 });
-            } else if let Some(l2) = r_l2 {
+            } else if r_l2 > 0.0 {
                 // Apply L2 regularization only
-                let weight_decay = 1.0 - (eta * l2) / data_size;
+                let weight_decay = 1.0 - (eta * r_l2) / data_size;
                 base.weights.map_inplace(|w| *w *= weight_decay);
-            } else if let Some(l1) = r_l1 {
+            } else if r_l1 > 0.0 {
                 // Apply L1 regularization only
+                let l1_step = (eta * r_l1) / data_size;
                 base.weights.map_inplace(|w| {
-                    *w -= eta * l1 * w.signum() / data_size;
+                    *w -= l1_step * w.signum();
                 });
             }
 

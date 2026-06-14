@@ -48,7 +48,7 @@ pub fn lenet5() -> Network {
             max_epochs: 10,
             mini_batch_size: 10,
             eta: 0.1,
-            regularization_l2: Some(5.0),
+            regularization_l2: 5.0,
             ..NetOptions::default()
         },
     )
