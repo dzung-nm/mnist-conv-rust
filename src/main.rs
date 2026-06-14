@@ -1,6 +1,4 @@
-mod load_mnist;
-mod unzip;
-
+use mnist_conv_rust::load_mnist;
 use mnist_conv_rust::Layer;
 use mnist_conv_rust::conv_layer::{ConvLayer, ConvLayerConfig};
 use mnist_conv_rust::max_pool_layer::{MaxPoolLayer, MaxPoolLayerConfig};
@@ -8,8 +6,6 @@ use mnist_conv_rust::network::*;
 use mnist_conv_rust::sigmoid_layer::SigmoidLayer;
 use mnist_conv_rust::softmax_layer::SoftmaxLayer;
 use mnist_conv_rust::types::Dataset;
-
-use crate::load_mnist::load_mnist;
 
 fn main() {
     let mnist_data = load_mnist().expect("Failed to load MNIST dataset");

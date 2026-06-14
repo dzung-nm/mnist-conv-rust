@@ -9,6 +9,7 @@ pub mod types;
 pub mod lenet5;
 
 pub use base_layer::Layer;
+pub use mnist::load_mnist;
 
 mod base_layer;
 mod box_muller;
@@ -18,6 +19,7 @@ mod softmax;
 mod utils;
 mod im2col;
 mod col2im;
+mod mnist;
 
 // Suppress panic output for all tests
 #[cfg(test)]

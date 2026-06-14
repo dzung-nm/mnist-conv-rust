@@ -4,9 +4,8 @@ use std::io::Read;
 use byteorder::{LittleEndian, ByteOrder};
 use ndarray::{Array2, Array1};
 
-use mnist_conv_rust::types::{TrainingItem, TestItem, Dataset};
-
-use crate::unzip::unzip;
+use crate::types::*;
+use super::unzip::unzip;
 
 // Assure that you can see this folder.
 const DATA_DIR: &str = "data";
