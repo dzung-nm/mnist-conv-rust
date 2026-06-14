@@ -2,13 +2,13 @@ use ndarray::Array2;
 
 use crate::base_layer::*;
 
-pub struct MaxPoolConfig {
+pub struct MaxPoolLayerConfig {
     pub input: (usize, usize, usize), // in_channels, input_h, input_w
     pub pool_size: (usize, usize), // pool_h, pool_w
     pub stride: usize,
 }
 
-impl MaxPoolConfig {
+impl MaxPoolLayerConfig {
     pub fn get_output_size(&self) -> (usize, usize) {
         let (_, input_h, input_w) = self.input;
         let (pool_h, pool_w) = self.pool_size;
@@ -41,7 +41,7 @@ pub struct MaxPoolLayer {
 }
 
 impl MaxPoolLayer {
-    pub fn new(config: &MaxPoolConfig) -> Self {
+    pub fn new(config: &MaxPoolLayerConfig) -> Self {
         let (channels, input_h, input_w) = config.input;
         let (pool_h, pool_w) = config.pool_size;
         let stride = config.stride;
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_forward() {
-        let layer = MaxPoolLayer::new(&MaxPoolConfig {
+        let layer = MaxPoolLayer::new(&MaxPoolLayerConfig {
             input: (1, 4, 4),
             pool_size: (2, 2),
             stride: 2,
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_backward() {
-        let mut layer = MaxPoolLayer::new(&MaxPoolConfig {
+        let mut layer = MaxPoolLayer::new(&MaxPoolLayerConfig {
             input: (1, 4, 4),
             pool_size: (2, 2),
             stride: 2,
