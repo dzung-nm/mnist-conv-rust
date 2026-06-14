@@ -35,21 +35,27 @@ fn main() {
         regularization_l2: Some(5.0),
         ..NetOptions::default()
     };
+    
+    let conv_layer_config = ConvLayerConfig {
+        input: (1, 28, 28),
+        kernel_size: (5, 5),
+        num_filters: 6,
+        stride: 1,
+        padding: 0,
+    };
+    
+    let max_pool_layer_config = MaxPoolConfig {
+        input: (6, 24, 24),
+        pool_size: (2, 2),
+        stride: 2,
+    };
+    
+    let (_, max_pool_config_n_output) = max_pool_layer_config.get_n_in_n_out();
 
     let layers: Vec<Box<dyn Layer>> = vec![
-        Box::new(ConvLayer::new(&ConvLayerConfig {
-            input: (1, 28, 28),
-            kernel_size: (5, 5),
-            num_filters: 6,
-            stride: 1,
-            padding: 0,
-        })), // → 6×24×24 = 3456
-        Box::new(MaxPoolLayer::new(&MaxPoolConfig {
-            input: (6, 24, 24),
-            pool_size: (2, 2),
-            stride: 2,
-        })), // → 6×12×12 = 864
-        Box::new(SigmoidLayer::new(864, 30)),
+        Box::new(ConvLayer::new(&conv_layer_config)), // → 6×24×24 = 3456
+        Box::new(MaxPoolLayer::new(&max_pool_layer_config)), // → 6×12×12 = 864
+        Box::new(SigmoidLayer::new(max_pool_config_n_output, 30)),
         Box::new(SoftmaxLayer::new(30, 10)),
     ];
 

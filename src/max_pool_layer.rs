@@ -8,6 +8,26 @@ pub struct MaxPoolConfig {
     pub stride: usize,
 }
 
+impl MaxPoolConfig {
+    pub fn get_output_size(&self) -> (usize, usize) {
+        let (_, input_h, input_w) = self.input;
+        let (pool_h, pool_w) = self.pool_size;
+        let stride = self.stride;
+
+        let out_h = (input_h - pool_h) / stride + 1;
+        let out_w = (input_w - pool_w) / stride + 1;
+
+        (out_h, out_w)
+    }
+
+    // Returns (n_in, n_out) for the BaseLayer of this MaxPoolLayer.
+    pub fn get_n_in_n_out(&self) -> (usize, usize) {
+        let (channels, input_h, input_w) = self.input;
+        let (out_h, out_w) = self.get_output_size();
+        (channels * input_h * input_w, channels * out_h * out_w)
+    }
+}
+
 pub struct MaxPoolLayer {
     base: BaseLayer,
     channels: usize, // number of feature maps (filters)
@@ -26,10 +46,9 @@ impl MaxPoolLayer {
         let (pool_h, pool_w) = config.pool_size;
         let stride = config.stride;
 
-        let out_h = (input_h - pool_h) / stride + 1;
-        let out_w = (input_w - pool_w) / stride + 1;
-        let input_size = channels * input_h * input_w;
-        let output_size = channels * out_h * out_w;
+        let (out_h, out_w) = config.get_output_size();
+        let (input_size, output_size) = config.get_n_in_n_out();
+
         MaxPoolLayer {
             base: BaseLayer {
                 input_size,
