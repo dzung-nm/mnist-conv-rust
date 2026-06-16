@@ -169,7 +169,7 @@ impl Network {
             } else {
                 &forward_data[l - 1].activation
             };
-            let backward_data = self.layers[l].backward(input, &output_error, &forward_data[l].z);
+            let backward_data = self.layers[l].backward(input, &output_error, &forward_data[l]);
             // backward_data.input_gradient = W_l^T · δ_l  →  becomes the error signal for layer l-1
             output_error = backward_data.input_gradient;
             results.push((backward_data.nabla_w, backward_data.nabla_b));

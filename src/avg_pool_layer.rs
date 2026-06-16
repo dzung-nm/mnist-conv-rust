@@ -73,7 +73,7 @@ impl Layer for AveragePoolLayer {
         Array2::ones(z.dim())
     }
 
-    fn forward(&mut self, input: &Array2<f64>) -> ForwardData {
+    fn forward(&self, input: &Array2<f64>) -> ForwardData {
         let mut output = Array2::<f64>::zeros((self.channels * self.out_h * self.out_w, 1));
 
         let scale = 1.0 / ((self.pool_h * self.pool_w) as f64);
@@ -99,6 +99,7 @@ impl Layer for AveragePoolLayer {
         ForwardData {
             z: Array2::zeros((0, 0)),
             activation: output,
+            cache: None,
         }
     }
 
@@ -106,7 +107,7 @@ impl Layer for AveragePoolLayer {
         &self,
         _input: &Array2<f64>,
         output_error: &Array2<f64>,
-        _z: &Array2<f64>,
+        _forward_data: &ForwardData,
     ) -> BackwardData {
         let mut input_grad = Array2::<f64>::zeros((self.channels * self.input_h * self.input_w, 1));
 
@@ -145,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_forward() {
-        let mut layer = AveragePoolLayer::new(&PoolLayerConfig {
+        let layer = AveragePoolLayer::new(&PoolLayerConfig {
             input: (1, 4, 4),
             pool_size: (2, 2),
             stride: 2,
@@ -163,20 +164,19 @@ mod tests {
 
     #[test]
     fn test_backward() {
-        let mut layer = AveragePoolLayer::new(&PoolLayerConfig {
+        let layer = AveragePoolLayer::new(&PoolLayerConfig {
             input: (1, 4, 4),
             pool_size: (2, 2),
             stride: 2,
         });
         let output_error = array![[4.0], [8.0], [12.0], [16.0]]; // shape = (4, 1)
-        let dummy_z = Array2::zeros((0, 0));
-        let input_grad = layer.backward(&Array2::zeros((0, 0)), &output_error, &dummy_z).input_gradient;
+        let bw = layer.backward(&Array2::zeros((0, 0)), &output_error, &ForwardData::dummy());
         let expected = array![
             [1.0], [1.0], [2.0], [2.0],
             [1.0], [1.0], [2.0], [2.0],
             [3.0], [3.0], [4.0], [4.0],
             [3.0], [3.0], [4.0], [4.0]
         ]; // shape = (16, 1)
-        assert_eq!(input_grad, expected);
+        assert_eq!(bw.input_gradient, expected);
     }
 }

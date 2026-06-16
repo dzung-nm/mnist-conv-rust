@@ -9,10 +9,28 @@ pub enum LayerTypes {
     AveragePool,
 }
 
+pub enum LayerCache {
+    Conv {
+        cols: Array2<f64>,
+        z_2d: Array2<f64>,
+    },
+}
+
 /// Data returned from forward pass
 pub struct ForwardData {
     pub z: Array2<f64>,          // Pre-activation value (needed for backward pass)
     pub activation: Array2<f64>, // Post-activation value
+    pub cache: Option<LayerCache>,
+}
+
+impl ForwardData {
+    pub fn dummy() -> Self {
+        ForwardData {
+            z: Array2::zeros((0, 0)),
+            activation: Array2::zeros((0, 0)),
+            cache: None,
+        }
+    }
 }
 
 /// Data returned from backward pass
@@ -55,20 +73,20 @@ pub trait Layer {
     // Default implementations for forward and backward that can be
     // applied to most layers, but can be overridden if needed (e.g., for ConvLayer, PoolLayer)
 
-    fn forward(&mut self, input: &Array2<f64>) -> ForwardData {
+    fn forward(&self, input: &Array2<f64>) -> ForwardData {
         let base = self.get_base();
         let z = base.weights.dot(input) + &base.biases;
         let activation = self.activate(&z);
-        ForwardData { z, activation }
+        ForwardData { z, activation, cache: None }
     }
 
     fn backward(
         &self,
         input: &Array2<f64>,        // activation from previous layer
         output_error: &Array2<f64>, // error signal from next layer
-        z: &Array2<f64>, // pre-activation from forward pass (cached to avoid recomputation)
+        forward_data: &ForwardData, // data from forward pass (contains z, activation, and cache)
     ) -> BackwardData {
-        let delta = output_error * self.activate_prime(z);
+        let delta = output_error * self.activate_prime(&forward_data.z);
         let nabla_w = delta.dot(&input.t());
 
         // Propagated error for the previous layer: W_l^T · δ_l

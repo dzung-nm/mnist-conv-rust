@@ -98,7 +98,7 @@ impl Layer for MaxPoolLayer {
         Array2::ones(z.dim())
     }
 
-    fn forward(&mut self, input: &Array2<f64>) -> ForwardData {
+    fn forward(&self, input: &Array2<f64>) -> ForwardData {
         let mut output = Array2::<f64>::zeros((self.channels * self.out_h * self.out_w, 1));
 
         for c in 0..self.channels {
@@ -125,6 +125,7 @@ impl Layer for MaxPoolLayer {
             // No need to store z - backward will use input parameter directly
             z: Array2::zeros((0, 0)),
             activation: output,
+            cache: None
         }
     }
 
@@ -132,7 +133,7 @@ impl Layer for MaxPoolLayer {
         &self,
         input: &Array2<f64>,
         output_error: &Array2<f64>,
-        _z: &Array2<f64>,
+        _forward_data: &ForwardData,
     ) -> BackwardData {
         let mut input_grad = Array2::<f64>::zeros((self.channels * self.input_h * self.input_w, 1));
 
@@ -176,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_forward() {
-        let mut layer = MaxPoolLayer::new(&PoolLayerConfig {
+        let layer = MaxPoolLayer::new(&PoolLayerConfig {
             input: (1, 4, 4),
             pool_size: (2, 2),
             stride: 2,
@@ -206,9 +207,8 @@ mod tests {
             [13.0], [14.0], [15.0], [16.0]
         ];
         let output_error = array![[1.0], [2.0], [3.0], [4.0]]; // shape = (4, 1)
-        let dummy_z = Array2::zeros((0, 0));
         let input_grad = layer
-            .backward(&input, &output_error, &dummy_z)
+            .backward(&input, &output_error, &ForwardData::dummy())
             .input_gradient;
         let expected = array![
             [0.0], [0.0], [0.0], [0.0],
