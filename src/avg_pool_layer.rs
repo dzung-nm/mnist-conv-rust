@@ -31,8 +31,6 @@ impl AveragePoolLayer {
                 // These fields are not used for Pool layers
                 weights: Array2::zeros((0, 0)),
                 biases: Array2::zeros((0, 0)),
-                nabla_w: Array2::zeros((0, 0)),
-                nabla_b: Array2::zeros((0, 0)),
             },
             channels,
             input_h,
@@ -105,7 +103,7 @@ impl Layer for AveragePoolLayer {
     }
 
     fn backward(
-        &mut self,
+        &self,
         _input: &Array2<f64>,
         output_error: &Array2<f64>,
         _z: &Array2<f64>,
@@ -133,6 +131,8 @@ impl Layer for AveragePoolLayer {
 
         BackwardData {
             input_gradient: input_grad,
+            nabla_b: Array2::zeros((0, 0)),
+            nabla_w: Array2::zeros((0, 0)),
         }
     }
 }

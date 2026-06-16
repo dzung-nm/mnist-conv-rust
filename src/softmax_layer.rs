@@ -14,8 +14,6 @@ impl SoftmaxLayer {
             box_muller_random() * (1.0 / (n_in as f64).sqrt()) // Xavier initialization
         });
         let biases = Array2::from_shape_fn((n_out, 1), |_| box_muller_random());
-        let nabla_w = Array2::zeros((n_out, n_in));
-        let nabla_b = Array2::zeros((n_out, 1));
 
         SoftmaxLayer {
             base: BaseLayer {
@@ -23,8 +21,6 @@ impl SoftmaxLayer {
                 output_size: n_out,
                 weights,
                 biases,
-                nabla_w,
-                nabla_b,
             },
         }
     }

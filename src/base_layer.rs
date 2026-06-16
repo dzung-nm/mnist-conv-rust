@@ -11,13 +11,15 @@ pub enum LayerTypes {
 
 /// Data returned from forward pass
 pub struct ForwardData {
-    pub z: Array2<f64>, // Pre-activation value (needed for backward pass)
+    pub z: Array2<f64>,          // Pre-activation value (needed for backward pass)
     pub activation: Array2<f64>, // Post-activation value
 }
 
 /// Data returned from backward pass
 pub struct BackwardData {
     pub input_gradient: Array2<f64>, // Gradient to propagate to the previous layer
+    pub nabla_b: Array2<f64>,
+    pub nabla_w: Array2<f64>,
 }
 
 pub struct BaseLayer {
@@ -25,15 +27,6 @@ pub struct BaseLayer {
     pub output_size: usize,
     pub weights: Array2<f64>,
     pub biases: Array2<f64>,
-    pub nabla_w: Array2<f64>,
-    pub nabla_b: Array2<f64>,
-}
-
-impl BaseLayer {
-    pub fn reset_gradients(&mut self) {
-        self.nabla_w.fill(0.0);
-        self.nabla_b.fill(0.0);
-    }
 }
 
 pub trait Layer {
@@ -70,20 +63,21 @@ pub trait Layer {
     }
 
     fn backward(
-        &mut self,
-        input: &Array2<f64>, // activation from previous layer
+        &self,
+        input: &Array2<f64>,        // activation from previous layer
         output_error: &Array2<f64>, // error signal from next layer
         z: &Array2<f64>, // pre-activation from forward pass (cached to avoid recomputation)
     ) -> BackwardData {
         let delta = output_error * self.activate_prime(z);
-
-        let base = self.get_base_mut();
-        base.nabla_b += &delta;
-        base.nabla_w += &delta.dot(&input.t());
+        let nabla_w = delta.dot(&input.t());
 
         // Propagated error for the previous layer: W_l^T · δ_l
-        let input_gradient = base.weights.t().dot(&delta);
+        let input_gradient = self.get_base().weights.t().dot(&delta);
 
-        BackwardData { input_gradient }
+        BackwardData {
+            input_gradient,
+            nabla_b: delta,
+            nabla_w,
+        }
     }
 }

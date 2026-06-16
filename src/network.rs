@@ -127,7 +127,13 @@ impl Network {
         activation
     }
 
-    fn back_propagate(&mut self, x: &Array2<f64>, y: &Array2<f64>) {
+    /// Returns a vector of (nabla_w, nabla_b) of size equal to the number of layers,
+    /// where each element contains the gradients for that layer.
+    fn back_propagate(
+        &mut self,
+        x: &Array2<f64>,
+        y: &Array2<f64>,
+    ) -> Vec<(Array2<f64>, Array2<f64>)> {
         let n = self.layers.len();
 
         // Forward pass: collect ForwardData (z, activation) for every layer
@@ -156,8 +162,7 @@ impl Network {
             }
         };
 
-        // Backward pass: compute δ for each layer and accumulate ∇W and ∇b
-        // Now we pass the cached z from forward_data to avoid recomputation
+        let mut results = Vec::with_capacity(n);
         for l in (0..n).rev() {
             let input = if l == 0 {
                 x
@@ -167,7 +172,11 @@ impl Network {
             let backward_data = self.layers[l].backward(input, &output_error, &forward_data[l].z);
             // backward_data.input_gradient = W_l^T · δ_l  →  becomes the error signal for layer l-1
             output_error = backward_data.input_gradient;
+            results.push((backward_data.nabla_w, backward_data.nabla_b));
         }
+
+        results.reverse();
+        results
     }
 
     fn update_mini_batch(&mut self, mini_batch: Vec<&TrainingItem>, training_data_size: usize) {
@@ -178,52 +187,57 @@ impl Network {
         let batch_size = mini_batch.len() as f64;
         let data_size = training_data_size as f64;
 
-        // Reset gradients for all layers before processing the mini-batch
-        for layer in self.layers.iter_mut() {
-            layer.get_base_mut().reset_gradients();
-        }
-
-        mini_batch.iter().for_each(|&item| {
-            self.back_propagate(&item.0, &item.1);
-        });
+        let gradients: Vec<_> = mini_batch.iter()
+            .map(|item| self.back_propagate(&item.0, &item.1))
+            .collect();
 
         // Apply gradient updates
         let scale = eta / batch_size;
-        for layer in self.layers.iter_mut() {
-            let base = layer.get_base_mut();
+        for i in 0..self.layers.len() {
+            let layer = self.layers[i].get_base();
 
             // Skip parameter-free layers (e.g., MaxPoolLayer)
-            if base.weights.is_empty() {
+            if layer.weights.is_empty() {
                 continue;
             }
 
+            let mut sum_nabla_w = Array2::<f64>::zeros(layer.weights.dim());
+            let mut sum_nabla_b = Array2::<f64>::zeros(layer.biases.dim());
+
+            for grad in &gradients {
+                sum_nabla_w += &grad[i].0;
+                sum_nabla_b += &grad[i].1;
+            }
+
+            let mut_layer = self.layers[i].get_base_mut();
+
             // Bias update: b ← b − (η/m) · ∇b
-            let db = scale * &base.nabla_b;
-            base.biases -= &db;
+            let db = scale * &sum_nabla_b;
+            mut_layer.biases -= &db;
 
             // Regularization applied to weights before the gradient step
             if r_l1 > 0.0 && r_l2 > 0.0 {
                 // Apply both L1 and L2 regularization
                 let weight_decay = 1.0 - (eta * r_l2) / data_size;
                 let l1_step = (eta * r_l1) / data_size;
-                base.weights.map_inplace(|w| {
+                mut_layer.weights.map_inplace(|w| {
                     *w = *w * weight_decay - l1_step * w.signum();
                 });
             } else if r_l2 > 0.0 {
                 // Apply L2 regularization only
                 let weight_decay = 1.0 - (eta * r_l2) / data_size;
-                base.weights.map_inplace(|w| *w *= weight_decay);
+                mut_layer.weights.map_inplace(|w| *w *= weight_decay);
             } else if r_l1 > 0.0 {
                 // Apply L1 regularization only
                 let l1_step = (eta * r_l1) / data_size;
-                base.weights.map_inplace(|w| {
+                mut_layer.weights.map_inplace(|w| {
                     *w -= l1_step * w.signum();
                 });
             }
 
             // Weight update: W ← W − (η/m) · ∇W
-            let dw = scale * &base.nabla_w;
-            base.weights -= &dw;
+            let dw = scale * &sum_nabla_w;
+            mut_layer.weights -= &dw;
         }
     }
 

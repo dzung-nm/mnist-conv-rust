@@ -48,17 +48,12 @@ impl ConvLayer {
             Array2::from_shape_fn((num_filters, kernel_size), |_| box_muller_random() * std);
         let biases = Array2::zeros((num_filters, 1));
 
-        let nabla_w = Array2::zeros((num_filters, kernel_size));
-        let nabla_b = Array2::zeros((num_filters, 1));
-
         ConvLayer {
             base: BaseLayer {
                 input_size: in_channels * input_h * input_w,
                 output_size: num_filters * out_h * out_w,
                 weights,
                 biases,
-                nabla_w,
-                nabla_b,
             },
             in_channels,
             num_filters,
@@ -146,7 +141,7 @@ impl Layer for ConvLayer {
     }
 
     fn backward(
-        &mut self,
+        &self,
         _input: &Array2<f64>,
         output_error: &Array2<f64>,
         _z: &Array2<f64>,
@@ -168,13 +163,12 @@ impl Layer for ConvLayer {
         let delta = output_error_2d * relu_prime(&self.cached_z_2d);
 
         // ∇filters (= ∇W): (num_filters, in_ch × kH × kW)
-        self.base.nabla_w += &delta.dot(&self.cached_cols.t());
+        let nabla_w = delta.dot(&self.cached_cols.t());
 
         // ∇biases: (num_filters, 1) = sum over spatial dimension
-        let nabla_b_update = delta
+        let nabla_b = delta
             .sum_axis(ndarray::Axis(1))
             .insert_axis(ndarray::Axis(1));
-        self.base.nabla_b += &nabla_b_update;
 
         // Propagated error: col2im(filtersᵀ @ δ)
         let delta_cols = self.base.weights.t().dot(&delta);
@@ -191,6 +185,8 @@ impl Layer for ConvLayer {
 
         BackwardData {
             input_gradient: input_grad,
+            nabla_b,
+            nabla_w,
         }
     }
 }
@@ -203,7 +199,7 @@ mod tests {
     #[test]
     #[should_panic = "ConvLayer backward: cols or z_2d not cached from forward pass"]
     fn test_backward_cache_not_exist() {
-        let mut layer = ConvLayer::new(&ConvLayerConfig {
+        let layer = ConvLayer::new(&ConvLayerConfig {
             input: (1, 4, 4),
             kernel_size: (2, 2),
             num_filters: 1,

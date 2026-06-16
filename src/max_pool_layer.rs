@@ -4,7 +4,7 @@ use crate::base_layer::*;
 
 pub struct PoolLayerConfig {
     pub input: (usize, usize, usize), // in_channels, input_h, input_w
-    pub pool_size: (usize, usize), // pool_h, pool_w
+    pub pool_size: (usize, usize),    // pool_h, pool_w
     pub stride: usize,
 }
 
@@ -56,8 +56,6 @@ impl MaxPoolLayer {
                 // These fields are not used for Pool layers
                 weights: Array2::zeros((0, 0)),
                 biases: Array2::zeros((0, 0)),
-                nabla_w: Array2::zeros((0, 0)),
-                nabla_b: Array2::zeros((0, 0)),
             },
             channels,
             input_h,
@@ -131,7 +129,7 @@ impl Layer for MaxPoolLayer {
     }
 
     fn backward(
-        &mut self,
+        &self,
         input: &Array2<f64>,
         output_error: &Array2<f64>,
         _z: &Array2<f64>,
@@ -164,10 +162,13 @@ impl Layer for MaxPoolLayer {
 
         BackwardData {
             input_gradient: input_grad,
+            nabla_b: Array2::zeros((0, 0)),
+            nabla_w: Array2::zeros((0, 0)),
         }
     }
 }
 
+#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,38 +182,34 @@ mod tests {
             stride: 2,
         });
         let input = array![
-            [1.0], [2.0], [3.0], [4.0],
-            [5.0], [6.0], [7.0], [8.0],
-            [9.0], [10.0], [11.0], [12.0],
+            [1.0],  [2.0],  [3.0],  [4.0],
+            [5.0],  [6.0],  [7.0],  [8.0],
+            [9.0],  [10.0], [11.0], [12.0],
             [13.0], [14.0], [15.0], [16.0]
         ]; // shape = (16, 1)
         let output = layer.forward(&input).activation;
-        let expected = array![
-            [6.0], [8.0],
-            [14.0], [16.0]
-        ]; // shape = (4, 1)
+        let expected = array![[6.0], [8.0], [14.0], [16.0]]; // shape = (4, 1)
         assert_eq!(output, expected);
     }
 
     #[test]
     fn test_backward() {
-        let mut layer = MaxPoolLayer::new(&PoolLayerConfig {
+        let layer = MaxPoolLayer::new(&PoolLayerConfig {
             input: (1, 4, 4),
             pool_size: (2, 2),
             stride: 2,
         });
         let input = array![
-            [1.0], [2.0], [3.0], [4.0],
-            [5.0], [6.0], [7.0], [8.0],
-            [9.0], [10.0], [11.0], [12.0],
+            [1.0],  [2.0],  [3.0],  [4.0],
+            [5.0],  [6.0],  [7.0],  [8.0],
+            [9.0],  [10.0], [11.0], [12.0],
             [13.0], [14.0], [15.0], [16.0]
         ];
-        let output_error = array![
-            [1.0], [2.0],
-            [3.0], [4.0]
-        ]; // shape = (4, 1)
+        let output_error = array![[1.0], [2.0], [3.0], [4.0]]; // shape = (4, 1)
         let dummy_z = Array2::zeros((0, 0));
-        let input_grad = layer.backward(&input, &output_error, &dummy_z).input_gradient;
+        let input_grad = layer
+            .backward(&input, &output_error, &dummy_z)
+            .input_gradient;
         let expected = array![
             [0.0], [0.0], [0.0], [0.0],
             [0.0], [1.0], [0.0], [2.0],
