@@ -36,7 +36,7 @@ impl Layer for SoftmaxLayer {
     }
 
     fn get_name(&self) -> String {
-        "SoftmaxLayer, weight init method = Xavier".to_string()
+        "SoftmaxLayer (Xavier init)".to_string()
     }
 
     fn get_type(&self) -> LayerTypes {
@@ -62,6 +62,7 @@ impl Layer for SoftmaxLayer {
             z,
             activation,
             cache: None,
+            dropout_mask: None,
         }
     }
 

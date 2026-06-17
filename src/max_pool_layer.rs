@@ -125,7 +125,8 @@ impl Layer for MaxPoolLayer {
             // No need to store z - backward will use input parameter directly
             z: Array2::zeros((0, 0)),
             activation: output,
-            cache: None
+            cache: None,
+            dropout_mask: None,
         }
     }
 

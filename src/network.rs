@@ -99,7 +99,10 @@ impl Network {
             }
         }
 
-        let cost_function = match layers.last().unwrap().get_type() {
+        let last_layer = layers.last().unwrap();
+
+        // cost function depends on the type of the last layer
+        let cost_function = match last_layer.get_type() {
             LayerTypes::Softmax => CostFunctions::CrossEntropy,
             _ => CostFunctions::Quadratic,
         };

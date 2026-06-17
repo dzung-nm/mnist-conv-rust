@@ -132,6 +132,7 @@ impl Layer for ConvLayer {
                 cols,
                 z_2d,
             }),
+            dropout_mask: None,
         }
     }
 

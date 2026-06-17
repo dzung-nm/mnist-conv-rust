@@ -21,6 +21,7 @@ pub struct ForwardData {
     pub z: Array2<f64>,          // Pre-activation value (needed for backward pass)
     pub activation: Array2<f64>, // Post-activation value
     pub cache: Option<LayerCache>,
+    pub dropout_mask: Option<Array2<f64>>, // Dropout mask for backward pass
 }
 
 impl ForwardData {
@@ -29,6 +30,7 @@ impl ForwardData {
             z: Array2::zeros((0, 0)),
             activation: Array2::zeros((0, 0)),
             cache: None,
+            dropout_mask: None,
         }
     }
 }

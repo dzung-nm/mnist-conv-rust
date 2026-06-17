@@ -6,6 +6,7 @@ use crate::sigmoid::*;
 
 pub struct SigmoidLayer {
     base: BaseLayer,
+    dropout_rate: f64,
 }
 
 impl SigmoidLayer {
@@ -22,7 +23,16 @@ impl SigmoidLayer {
                 weights,
                 biases,
             },
+            dropout_rate: 0.0,
         }
+    }
+
+    /// Create a new SigmoidLayer with optional dropout
+    /// dropout_rate - Probability of dropping a neuron (0.0 = no dropout, 0.5 = 50% dropout)
+    pub fn new_with_dropout(n_in: usize, n_out: usize, dropout_rate: f64) -> Self {
+        let mut layer = SigmoidLayer::new(n_in, n_out);
+        layer.dropout_rate = dropout_rate.clamp(0.0, 1.0);
+        layer
     }
 }
 
@@ -36,7 +46,10 @@ impl Layer for SigmoidLayer {
     }
 
     fn get_name(&self) -> String {
-        "SigmoidLayer, weight init method = Xavier".to_string()
+        format!(
+            "SigmoidLayer (Xavier init, dropout={:.2})",
+            self.dropout_rate
+        )
     }
 
     fn get_type(&self) -> LayerTypes {
@@ -51,14 +64,36 @@ impl Layer for SigmoidLayer {
         sigmoid_prime(z)
     }
 
-    fn forward(&self, input: &Array2<f64>, _is_training: bool) -> ForwardData {
+    fn forward(&self, input: &Array2<f64>, is_training: bool) -> ForwardData {
         let base = self.get_base();
         let z = base.weights.dot(input) + &base.biases;
-        let activation = self.activate(&z);
+        let mut activation = self.activate(&z);
+
+        let dropout_mask = if is_training && self.dropout_rate > 0.0 {
+            let keep_prob = 1.0 - self.dropout_rate;
+            let scale = 1.0 / keep_prob; // Inverted dropout: scale up during training
+
+            // Create dropout mask: 0 for dropped neurons, scale for kept neurons
+            let mask = Array2::from_shape_fn(activation.dim(), |_| {
+                if rand::random::<f64>() < keep_prob {
+                    scale
+                } else {
+                    0.0
+                }
+            });
+
+            // Apply mask to activation
+            activation = activation * &mask;
+            Some(mask)
+        } else {
+            None // No dropout during inference
+        };
+
         ForwardData {
             z,
             activation,
             cache: None,
+            dropout_mask,
         }
     }
 
@@ -68,7 +103,14 @@ impl Layer for SigmoidLayer {
         output_error: &Array2<f64>,
         forward_data: &ForwardData,
     ) -> BackwardData {
-        let delta = output_error * self.activate_prime(&forward_data.z);
+        // Apply dropout mask to output_error if it exists
+        let masked_error = if let Some(ref mask) = forward_data.dropout_mask {
+            output_error * mask
+        } else {
+            output_error.clone()
+        };
+
+        let delta = &masked_error * self.activate_prime(&forward_data.z);
         let nabla_w = delta.dot(&input.t());
 
         // Propagated error for the previous layer: W_l^T · δ_l
@@ -79,5 +121,50 @@ impl Layer for SigmoidLayer {
             nabla_b: delta,
             nabla_w,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_forward_training() {
+        let layer = SigmoidLayer::new_with_dropout(4, 3, 0.5);
+        let input = Array2::from_shape_vec((4, 1), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+
+        let forward_data = layer.forward(&input, true);
+
+        // Of course, there must be a dropout mask during training
+        assert!(forward_data.dropout_mask.is_some());
+
+        let activation = forward_data.activation;
+        let dropout_mask = forward_data.dropout_mask.unwrap();
+
+        // There should have at least one neuron dropped (0.0) and at least one active neuron
+        let num_dropped = activation.iter().filter(|&&x| x == 0.0).count();
+        let num_active = activation.iter().filter(|&&x| x != 0.0).count();
+        assert!(num_dropped > 0);
+        assert!(num_active > 0);
+
+        // In this case, scale = 1 / (1 - 0.5) = 2.0
+        // So, there should have at least one mask value = 0.0 and at least one mask value = 2.0
+        let num_mask_dropped = dropout_mask.iter().filter(|&&x| x == 0.0).count();
+        let num_active = dropout_mask.iter().filter(|&&x| x != 0.0).count();
+        assert!(num_mask_dropped > 0);
+        assert!(num_active > 0);
+    }
+
+    #[test]
+    fn test_forward_inference() {
+        let input = Array2::from_shape_vec((4, 1), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+
+        let layer = SigmoidLayer::new(4, 3);
+        let forward_data = layer.forward(&input, false);
+        assert!(forward_data.dropout_mask.is_none());
+
+        let layer = SigmoidLayer::new_with_dropout(4, 3, 0.0);
+        let forward_data = layer.forward(&input, false);
+        assert!(forward_data.dropout_mask.is_none());
     }
 }

@@ -51,7 +51,7 @@ fn main() {
     let layers: Vec<Box<dyn Layer>> = vec![
         Box::new(ConvLayer::new(&conv_layer_config)), // → 6×24×24 = 3456
         Box::new(MaxPoolLayer::new(&max_pool_layer_config)), // → 6×12×12 = 864
-        Box::new(SigmoidLayer::new(max_pool_config_n_output, 30)),
+        Box::new(SigmoidLayer::new_with_dropout(max_pool_config_n_output, 30, 0.5)), // 50% dropout
         Box::new(SoftmaxLayer::new(30, 10)),
     ];
 

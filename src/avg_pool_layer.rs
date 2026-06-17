@@ -100,6 +100,7 @@ impl Layer for AveragePoolLayer {
             z: Array2::zeros((0, 0)),
             activation: output,
             cache: None,
+            dropout_mask: None,
         }
     }
 
