@@ -73,7 +73,7 @@ impl Layer for AveragePoolLayer {
         Array2::ones(z.dim())
     }
 
-    fn forward(&self, input: &Array2<f64>) -> ForwardData {
+    fn forward(&self, input: &Array2<f64>, _is_training: bool) -> ForwardData {
         let mut output = Array2::<f64>::zeros((self.channels * self.out_h * self.out_w, 1));
 
         let scale = 1.0 / ((self.pool_h * self.pool_w) as f64);
@@ -157,7 +157,7 @@ mod tests {
             [7.0], [3.0], [8.0], [3.0],
             [1.0], [9.0], [8.0], [3.0]
         ]; // shape = (16, 1)
-        let output = layer.forward(&input).activation;
+        let output = layer.forward(&input, false).activation;
         let expected = array![[5.0], [2.0], [5.0], [5.5]]; // shape = (4, 1)
         assert_eq!(output, expected);
     }

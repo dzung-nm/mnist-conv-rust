@@ -93,7 +93,7 @@ impl Layer for ConvLayer {
         relu_prime(z)
     }
 
-    fn forward(&self, input: &Array2<f64>) -> ForwardData {
+    fn forward(&self, input: &Array2<f64>, _is_training: bool) -> ForwardData {
         let spatial = self.out_h * self.out_w;
 
         // im2col: (in_ch × kH × kW,  out_h × out_w), e.g: (25, 576)

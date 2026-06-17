@@ -98,7 +98,7 @@ impl Layer for MaxPoolLayer {
         Array2::ones(z.dim())
     }
 
-    fn forward(&self, input: &Array2<f64>) -> ForwardData {
+    fn forward(&self, input: &Array2<f64>, _is_training: bool) -> ForwardData {
         let mut output = Array2::<f64>::zeros((self.channels * self.out_h * self.out_w, 1));
 
         for c in 0..self.channels {
@@ -188,7 +188,7 @@ mod tests {
             [9.0],  [10.0], [11.0], [12.0],
             [13.0], [14.0], [15.0], [16.0]
         ]; // shape = (16, 1)
-        let output = layer.forward(&input).activation;
+        let output = layer.forward(&input, false).activation;
         let expected = array![[6.0], [8.0], [14.0], [16.0]]; // shape = (4, 1)
         assert_eq!(output, expected);
     }

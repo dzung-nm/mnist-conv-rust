@@ -53,4 +53,34 @@ impl Layer for SoftmaxLayer {
         // backward implementation correctly reduces to:  δ_L = output_error ⊙ 1 = a_L − y.
         Array2::from_shape_fn(z.dim(), |_| 1.0)
     }
+
+    fn forward(&self, input: &Array2<f64>, _is_training: bool) -> ForwardData {
+        let base = self.get_base();
+        let z = base.weights.dot(input) + &base.biases;
+        let activation = self.activate(&z);
+        ForwardData {
+            z,
+            activation,
+            cache: None,
+        }
+    }
+
+    fn backward(
+        &self,
+        input: &Array2<f64>,
+        output_error: &Array2<f64>,
+        forward_data: &ForwardData,
+    ) -> BackwardData {
+        let delta = output_error * self.activate_prime(&forward_data.z);
+        let nabla_w = delta.dot(&input.t());
+
+        // Propagated error for the previous layer: W_l^T · δ_l
+        let input_gradient = self.get_base().weights.t().dot(&delta);
+
+        BackwardData {
+            input_gradient,
+            nabla_b: delta,
+            nabla_w,
+        }
+    }
 }

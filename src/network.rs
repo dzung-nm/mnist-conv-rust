@@ -122,7 +122,7 @@ impl Network {
     fn feed_forward(&self, x: &Array2<f64>) -> Array2<f64> {
         let mut activation = x.clone();
         for layer in &self.layers {
-            let data = layer.forward(&activation);
+            let data = layer.forward(&activation, false);
             activation = data.activation;
         }
         activation
@@ -146,7 +146,7 @@ impl Network {
             } else {
                 &forward_data[i - 1].activation
             };
-            let data = self.layers[i].forward(input);
+            let data = self.layers[i].forward(input, true);
             forward_data.push(data);
         }
 
