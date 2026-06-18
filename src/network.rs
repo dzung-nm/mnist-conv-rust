@@ -383,13 +383,13 @@ impl Network {
 mod tests {
     use super::*;
 
-    use crate::sigmoid_layer::SigmoidLayer;
+    use crate::fully_connected_layer::FullyConnectedLayer;
     use crate::softmax_layer::SoftmaxLayer;
 
     #[test]
     #[should_panic = "Network must have at least 2 layers"]
     fn test_at_least_two_layers() {
-        let layers: Vec<Box<dyn Layer>> = vec![Box::new(SigmoidLayer::new(100, 10))];
+        let layers: Vec<Box<dyn Layer>> = vec![Box::new(FullyConnectedLayer::new(100, 10))];
         Network::new(layers, NetOptions::default());
     }
 
@@ -397,8 +397,8 @@ mod tests {
     #[should_panic = "Input and output layers do not match"]
     fn test_input_output_not_match() {
         let layers: Vec<Box<dyn Layer>> = vec![
-            Box::new(SigmoidLayer::new(784, 100)),
-            Box::new(SigmoidLayer::new(50, 10)),
+            Box::new(FullyConnectedLayer::new(784, 100)),
+            Box::new(FullyConnectedLayer::new(50, 10)),
         ];
         Network::new(layers, NetOptions::default());
     }
@@ -408,7 +408,7 @@ mod tests {
     fn test_softmax_not_match() {
         let layers: Vec<Box<dyn Layer>> = vec![
             Box::new(SoftmaxLayer::new(784, 100)),
-            Box::new(SigmoidLayer::new(100, 10)),
+            Box::new(FullyConnectedLayer::new(100, 10)),
         ];
         Network::new(layers, NetOptions::default());
     }
@@ -417,8 +417,8 @@ mod tests {
     #[should_panic = "The last layer should not support dropout"]
     fn test_dropout_not_match() {
         let layers: Vec<Box<dyn Layer>> = vec![
-            Box::new(SigmoidLayer::new(784, 30)),
-            Box::new(SigmoidLayer::new_with_dropout(30, 10, 0.5)),
+            Box::new(FullyConnectedLayer::new(784, 30)),
+            Box::new(FullyConnectedLayer::new_with_dropout(30, 10, 0.5)),
         ];
         Network::new(layers, NetOptions::default());
     }

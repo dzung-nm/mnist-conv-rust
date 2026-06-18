@@ -4,19 +4,19 @@ use crate::base_layer::*;
 use crate::box_muller::box_muller_random;
 use crate::sigmoid::*;
 
-pub struct SigmoidLayer {
+pub struct FullyConnectedLayer {
     base: BaseLayer,
     dropout_rate: f64,
 }
 
-impl SigmoidLayer {
+impl FullyConnectedLayer {
     pub fn new(n_in: usize, n_out: usize) -> Self {
         let weights = Array2::from_shape_fn((n_out, n_in), |_| {
             box_muller_random() * (1.0 / (n_in as f64).sqrt()) // Xavier initialization
         });
         let biases = Array2::from_shape_fn((n_out, 1), |_| box_muller_random());
 
-        SigmoidLayer {
+        FullyConnectedLayer {
             base: BaseLayer {
                 input_size: n_in,
                 output_size: n_out,
@@ -27,16 +27,16 @@ impl SigmoidLayer {
         }
     }
 
-    /// Create a new SigmoidLayer with optional dropout
+    /// Create a new FullyConnectedLayer with optional dropout
     /// dropout_rate - Probability of dropping a neuron (0.0 = no dropout, 0.5 = 50% dropout)
     pub fn new_with_dropout(n_in: usize, n_out: usize, dropout_rate: f64) -> Self {
-        let mut layer = SigmoidLayer::new(n_in, n_out);
+        let mut layer = FullyConnectedLayer::new(n_in, n_out);
         layer.dropout_rate = dropout_rate.clamp(0.0, 1.0);
         layer
     }
 }
 
-impl Layer for SigmoidLayer {
+impl Layer for FullyConnectedLayer {
     fn get_base(&self) -> &BaseLayer {
         &self.base
     }
@@ -48,12 +48,12 @@ impl Layer for SigmoidLayer {
     fn get_name(&self) -> String {
         if self.dropout_rate > 0.0 {
             return format!(
-                "SigmoidLayer (Xavier init, dropout={:.2})",
+                "FullyConnectedLayer (Xavier init, dropout={:.2})",
                 self.dropout_rate
             );
         };
 
-        "SigmoidLayer (Xavier init, no dropout)".to_string()
+        "FullyConnectedLayer (Xavier init, no dropout)".to_string()
     }
 
     fn support_dropout(&self) -> bool {
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_forward_training() {
-        let layer = SigmoidLayer::new_with_dropout(4, 3, 0.5);
+        let layer = FullyConnectedLayer::new_with_dropout(4, 3, 0.5);
         let input = Array2::from_shape_vec((4, 1), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
 
         let forward_data = layer.forward(&input, true);
@@ -167,11 +167,11 @@ mod tests {
     fn test_forward_inference() {
         let input = Array2::from_shape_vec((4, 1), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
 
-        let layer = SigmoidLayer::new(4, 3);
+        let layer = FullyConnectedLayer::new(4, 3);
         let forward_data = layer.forward(&input, false);
         assert!(forward_data.dropout_mask.is_none());
 
-        let layer = SigmoidLayer::new_with_dropout(4, 3, 0.0);
+        let layer = FullyConnectedLayer::new_with_dropout(4, 3, 0.0);
         let forward_data = layer.forward(&input, false);
         assert!(forward_data.dropout_mask.is_none());
     }

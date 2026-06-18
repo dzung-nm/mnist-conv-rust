@@ -5,7 +5,7 @@ pub mod conv_layer;
 pub mod conv_pool_layer;
 pub mod max_pool_layer;
 pub mod avg_pool_layer;
-pub mod sigmoid_layer;
+pub mod fully_connected_layer;
 pub mod softmax_layer;
 pub mod types;
 pub mod lenet5;

@@ -6,7 +6,7 @@ use crate::avg_pool_layer::*;
 use crate::conv_layer::*;
 use crate::max_pool_layer::PoolLayerConfig;
 use crate::network::*;
-use crate::sigmoid_layer::SigmoidLayer;
+use crate::fully_connected_layer::FullyConnectedLayer;
 use crate::softmax_layer::SoftmaxLayer;
 
 pub fn lenet5(max_epochs: usize) -> Network {
@@ -41,8 +41,8 @@ pub fn lenet5(max_epochs: usize) -> Network {
         Box::new(AveragePoolLayer::new(&pool_layer_config1)), // → 6×14×14
         Box::new(ConvLayer::new(&conv_layer_config2)), // → 16×10×10
         Box::new(AveragePoolLayer::new(&pool_layer_config2)), // → 16×5×5
-        Box::new(SigmoidLayer::new(16 * 5 * 5, 120)),
-        Box::new(SigmoidLayer::new(120, 84)),
+        Box::new(FullyConnectedLayer::new(16 * 5 * 5, 120)),
+        Box::new(FullyConnectedLayer::new(120, 84)),
         Box::new(SoftmaxLayer::new(84, 10)),
     ];
 

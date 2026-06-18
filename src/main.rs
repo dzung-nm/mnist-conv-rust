@@ -2,7 +2,7 @@ use mnist_conv_rust::load_mnist;
 use mnist_conv_rust::Layer;
 use mnist_conv_rust::conv_pool_layer::*;
 use mnist_conv_rust::network::*;
-use mnist_conv_rust::sigmoid_layer::SigmoidLayer;
+use mnist_conv_rust::fully_connected_layer::FullyConnectedLayer;
 use mnist_conv_rust::softmax_layer::SoftmaxLayer;
 use mnist_conv_rust::types::Dataset;
 
@@ -43,7 +43,7 @@ fn main() {
     
     let layers: Vec<Box<dyn Layer>> = vec![
         Box::new(ConvPoolLayer::new(&fused_layer_config)), // → 6×12×12 = 864
-        Box::new(SigmoidLayer::new_with_dropout(864, 30, 0.5)), // 50% dropout
+        Box::new(FullyConnectedLayer::new_with_dropout(864, 30, 0.5)), // 50% dropout
         Box::new(SoftmaxLayer::new(30, 10)),
     ];
 
