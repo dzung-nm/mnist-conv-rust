@@ -1,10 +1,11 @@
-use ndarray::Array2;
+use ndarray::{Array2, Array3};
 
 #[derive(Debug, PartialEq)]
 pub enum LayerTypes {
     Sigmoid,
     Softmax,
     Conv,
+    ConvPool,
     MaxPool,
     AveragePool,
 }
@@ -13,6 +14,11 @@ pub enum LayerCache {
     Conv {
         cols: Array2<f64>,
         z_2d: Array2<f64>,
+    },
+    ConvPool {
+        cols: Array2<f64>,
+        z_2d: Array2<f64>,
+        a_3d: Array3<f64>,
     },
 }
 

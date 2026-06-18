@@ -2,6 +2,7 @@ extern crate blas_src;
 
 pub mod network;
 pub mod conv_layer;
+pub mod conv_pool_layer;
 pub mod max_pool_layer;
 pub mod avg_pool_layer;
 pub mod sigmoid_layer;
