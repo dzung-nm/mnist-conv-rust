@@ -1,16 +1,22 @@
 use ndarray::Array2;
-
 use crate::base_layer::*;
 use crate::box_muller::box_muller_random;
+use crate::relu::*;
 use crate::sigmoid::*;
 
 pub struct FullyConnectedLayer {
     base: BaseLayer,
     dropout_rate: f64,
+    activation_fn: ActivationFn,
 }
 
 impl FullyConnectedLayer {
-    pub fn new(n_in: usize, n_out: usize) -> Self {
+    pub fn with_dropout(
+        n_in: usize,
+        n_out: usize,
+        activation_fn: ActivationFn,
+        dropout_rate: f64,
+    ) -> Self {
         let weights = Array2::from_shape_fn((n_out, n_in), |_| {
             box_muller_random() * (1.0 / (n_in as f64).sqrt()) // Xavier initialization
         });
@@ -23,16 +29,17 @@ impl FullyConnectedLayer {
                 weights,
                 biases,
             },
-            dropout_rate: 0.0,
+            dropout_rate: dropout_rate.clamp(0.0, 1.0),
+            activation_fn,
         }
     }
 
-    /// Create a new FullyConnectedLayer with optional dropout
-    /// dropout_rate - Probability of dropping a neuron (0.0 = no dropout, 0.5 = 50% dropout)
-    pub fn new_with_dropout(n_in: usize, n_out: usize, dropout_rate: f64) -> Self {
-        let mut layer = FullyConnectedLayer::new(n_in, n_out);
-        layer.dropout_rate = dropout_rate.clamp(0.0, 1.0);
-        layer
+    pub fn with_activation(n_in: usize, n_out: usize, activation_fn: ActivationFn) -> Self {
+        Self::with_dropout(n_in, n_out, activation_fn, 0.0)
+    }
+
+    pub fn new(n_in: usize, n_out: usize) -> Self {
+        Self::with_dropout(n_in, n_out, ActivationFn::Sigmoid, 0.0)
     }
 }
 
@@ -46,14 +53,15 @@ impl Layer for FullyConnectedLayer {
     }
 
     fn get_name(&self) -> String {
-        if self.dropout_rate > 0.0 {
-            return format!(
-                "FullyConnectedLayer (Xavier init, dropout={:.2})",
-                self.dropout_rate
-            );
+        let dropout_label = if self.dropout_rate > 0.0 {
+            format!("dropout={:.2}", self.dropout_rate)
+        } else {
+            "no dropout".to_string()
         };
-
-        "FullyConnectedLayer (Xavier init, no dropout)".to_string()
+        format!(
+            "FullyConnectedLayer (Xavier init, {}, activation={:?})",
+            dropout_label, self.activation_fn
+        )
     }
 
     fn support_dropout(&self) -> bool {
@@ -61,15 +69,21 @@ impl Layer for FullyConnectedLayer {
     }
 
     fn get_type(&self) -> LayerTypes {
-        LayerTypes::Sigmoid
+        LayerTypes::FullyConnected
     }
 
     fn activate(&self, z: &Array2<f64>) -> Array2<f64> {
-        sigmoid(z)
+        match self.activation_fn {
+            ActivationFn::Sigmoid => sigmoid(z),
+            ActivationFn::ReLU => relu(z),
+        }
     }
 
     fn activate_prime(&self, z: &Array2<f64>) -> Array2<f64> {
-        sigmoid_prime(z)
+        match self.activation_fn {
+            ActivationFn::Sigmoid => sigmoid_prime(z),
+            ActivationFn::ReLU => relu_prime(z),
+        }
     }
 
     fn forward(&self, input: &Array2<f64>, is_training: bool) -> ForwardData {
@@ -138,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_forward_training() {
-        let layer = FullyConnectedLayer::new_with_dropout(4, 3, 0.5);
+        let layer = FullyConnectedLayer::with_dropout(4, 3, ActivationFn::Sigmoid, 0.5);
         let input = Array2::from_shape_vec((4, 1), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
 
         let forward_data = layer.forward(&input, true);
@@ -171,7 +185,7 @@ mod tests {
         let forward_data = layer.forward(&input, false);
         assert!(forward_data.dropout_mask.is_none());
 
-        let layer = FullyConnectedLayer::new_with_dropout(4, 3, 0.0);
+        let layer = FullyConnectedLayer::with_dropout(4, 3, ActivationFn::ReLU, 0.0);
         let forward_data = layer.forward(&input, false);
         assert!(forward_data.dropout_mask.is_none());
     }

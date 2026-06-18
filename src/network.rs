@@ -418,7 +418,7 @@ mod tests {
     fn test_dropout_not_match() {
         let layers: Vec<Box<dyn Layer>> = vec![
             Box::new(FullyConnectedLayer::new(784, 30)),
-            Box::new(FullyConnectedLayer::new_with_dropout(30, 10, 0.5)),
+            Box::new(FullyConnectedLayer::with_dropout(30, 10, ActivationFn::ReLU, 0.5)),
         ];
         Network::new(layers, NetOptions::default());
     }

@@ -10,7 +10,7 @@ pub mod softmax_layer;
 pub mod types;
 pub mod lenet5;
 
-pub use base_layer::Layer;
+pub use base_layer::{Layer, ActivationFn};
 pub use mnist::load_mnist;
 
 mod base_layer;

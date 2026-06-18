@@ -1,4 +1,4 @@
-use mnist_conv_rust::load_mnist;
+use mnist_conv_rust::{load_mnist, ActivationFn};
 use mnist_conv_rust::Layer;
 use mnist_conv_rust::conv_pool_layer::*;
 use mnist_conv_rust::network::*;
@@ -43,7 +43,7 @@ fn main() {
     
     let layers: Vec<Box<dyn Layer>> = vec![
         Box::new(ConvPoolLayer::new(&fused_layer_config)), // → 6×12×12 = 864
-        Box::new(FullyConnectedLayer::new_with_dropout(864, 30, 0.5)), // 50% dropout
+        Box::new(FullyConnectedLayer::with_dropout(864, 30, ActivationFn::Sigmoid , 0.5)), // 50% dropout
         Box::new(SoftmaxLayer::new(30, 10)),
     ];
 

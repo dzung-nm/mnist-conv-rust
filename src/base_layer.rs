@@ -1,8 +1,14 @@
 use ndarray::{Array2, Array3};
 
+#[derive(Debug)]
+pub enum ActivationFn {
+    Sigmoid,
+    ReLU,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum LayerTypes {
-    Sigmoid,
+    FullyConnected,
     Softmax,
     Conv,
     ConvPool,
