@@ -1,8 +1,8 @@
-use mnist_conv_rust::{load_mnist, ActivationFn};
-use mnist_conv_rust::network::*;
-use mnist_conv_rust::conv_pool_layer::*;
-use mnist_conv_rust::fully_connected_layer::*;
-use mnist_conv_rust::softmax_layer::SoftmaxLayer;
+use simple_conv_network::{load_mnist, ActivationFn};
+use simple_conv_network::network::*;
+use simple_conv_network::conv_pool_layer::*;
+use simple_conv_network::fully_connected_layer::*;
+use simple_conv_network::softmax_layer::SoftmaxLayer;
 
 //
 // http://neuralnetworksanddeeplearning.com/chap6.html

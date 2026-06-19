@@ -1,5 +1,5 @@
 [package]
-name = "mnist-conv-rust"
+name = "simple-conv-network"
 description = "A simple convolutional neural network implementation in Rust for the MNIST dataset."
 version = "0.1.0"
 edition = "2024"

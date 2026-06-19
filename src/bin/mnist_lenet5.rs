@@ -3,8 +3,8 @@
 /// It takes around 4.4s for an epoch on my machine (Mac M2 Air), and achieves
 /// around 99% accuracy after 10-20 epochs.
 
-use mnist_conv_rust::load_mnist;
-use mnist_conv_rust::lenet5::lenet5;
+use simple_conv_network::load_mnist;
+use simple_conv_network::lenet5::lenet5;
 
 fn main() {
     let mnist_data = load_mnist().expect("Failed to load MNIST dataset");

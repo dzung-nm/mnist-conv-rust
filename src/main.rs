@@ -1,9 +1,9 @@
-use mnist_conv_rust::{load_mnist, ActivationFn};
-use mnist_conv_rust::conv_pool_layer::*;
-use mnist_conv_rust::network::*;
-use mnist_conv_rust::fully_connected_layer::FullyConnectedLayer;
-use mnist_conv_rust::softmax_layer::SoftmaxLayer;
-use mnist_conv_rust::types::Dataset;
+use simple_conv_network::{load_mnist, ActivationFn};
+use simple_conv_network::conv_pool_layer::*;
+use simple_conv_network::network::*;
+use simple_conv_network::fully_connected_layer::FullyConnectedLayer;
+use simple_conv_network::softmax_layer::SoftmaxLayer;
+use simple_conv_network::types::Dataset;
 
 fn main() {
     let mnist_data = load_mnist().expect("Failed to load MNIST dataset");
