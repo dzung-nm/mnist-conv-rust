@@ -17,8 +17,14 @@ impl FullyConnectedLayer {
         activation_fn: ActivationFn,
         dropout_rate: f64,
     ) -> Self {
+        // Use appropriate initialization based on activation function
+        let std = match activation_fn {
+            ActivationFn::ReLU => (2.0 / n_in as f64).sqrt(),      // He initialization for ReLU
+            ActivationFn::Sigmoid => (1.0 / n_in as f64).sqrt(),   // Xavier initialization for Sigmoid
+        };
+
         let weights = Array2::from_shape_fn((n_out, n_in), |_| {
-            box_muller_random() * (1.0 / (n_in as f64).sqrt()) // Xavier initialization
+            box_muller_random() * std
         });
         let biases = Array2::from_shape_fn((n_out, 1), |_| box_muller_random());
 
@@ -58,9 +64,13 @@ impl Layer for FullyConnectedLayer {
         } else {
             "no dropout".to_string()
         };
+        let init_label = match self.activation_fn {
+            ActivationFn::ReLU => "He init",
+            ActivationFn::Sigmoid => "Xavier init",
+        };
         format!(
-            "FullyConnectedLayer (Xavier init, {}, activation={:?})",
-            dropout_label, self.activation_fn
+            "FullyConnectedLayer ({}, {}, activation={:?})",
+            init_label, dropout_label, self.activation_fn
         )
     }
 
