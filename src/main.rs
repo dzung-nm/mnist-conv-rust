@@ -1,5 +1,4 @@
 use mnist_conv_rust::{load_mnist, ActivationFn};
-use mnist_conv_rust::Layer;
 use mnist_conv_rust::conv_pool_layer::*;
 use mnist_conv_rust::network::*;
 use mnist_conv_rust::fully_connected_layer::FullyConnectedLayer;
@@ -23,31 +22,48 @@ fn main() {
         data.validation.len()
     );
 
-    let net_options = NetOptions {
-        max_epochs: 10,
-        mini_batch_size: 20,
-        eta: 0.1,
-        regularization_l2: 5.0,
-        ..NetOptions::default()
-    };
-    
-    let fused_layer_config = ConvPoolLayerConfig {
+    let cpl1 = ConvPoolLayerConfig {
         input: (1, 28, 28),
         kernel_size: (5, 5),
-        num_filters: 6,
+        num_filters: 20,
         stride: 1,
         padding: 0,
         pool_size: (2, 2),
         pool_stride: 2,
     };
-    
-    let layers: Vec<Box<dyn Layer>> = vec![
-        Box::new(ConvPoolLayer::new(&fused_layer_config)), // → 6×12×12 = 864
-        Box::new(FullyConnectedLayer::with_dropout(864, 30, ActivationFn::Sigmoid , 0.5)), // 50% dropout
-        Box::new(SoftmaxLayer::new(30, 10)),
-    ];
 
-    let mut network = Network::new(layers, net_options);
+    let cpl2 = ConvPoolLayerConfig {
+        input: (20, 12, 12),
+        kernel_size: (5, 5),
+        num_filters: 40,
+        stride: 1,
+        padding: 0,
+        pool_size: (2, 2),
+        pool_stride: 2,
+    };
+
+    let mut network = Network::new(
+        vec![
+            Box::new(ConvPoolLayer::new(&cpl1)),
+            Box::new(ConvPoolLayer::new(&cpl2)),
+            Box::new(FullyConnectedLayer::with_dropout(40 * 4 * 4, 100, ActivationFn::ReLU, 0.5)),
+            Box::new(FullyConnectedLayer::with_activation(100, 30, ActivationFn::Sigmoid)),
+            Box::new(SoftmaxLayer::new(30, 10)),
+        ],
+        NetOptions {
+            max_epochs: 20,
+            mini_batch_size: 20,
+            eta: 0.1,
+            regularization_l2: 0.1,
+            stop_early: false,
+            ..NetOptions::default()
+        },
+    );
+
+    // You will see more details about the training process, including training/test accuracy
+    // for each epoch. But it will slow down the training process.
+    // Comment it out will speed up the training.
+    network.log_more();
 
     println!("===============================");
     network.show_me();

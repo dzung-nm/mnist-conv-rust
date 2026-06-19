@@ -57,6 +57,12 @@ impl Default for NetOptions {
     }
 }
 
+#[derive(PartialEq)]
+pub enum LogType {
+    Minimal,
+    Detailed,
+}
+
 pub struct Network {
     pub layers: Vec<Box<dyn Layer>>,
     pub options: NetOptions,
@@ -68,6 +74,9 @@ pub struct Network {
     training_accuracies: Vec<f64>,
     validation_accuracies: Vec<f64>,
     test_accuracies: Vec<f64>,
+
+    // Logging level (minimal or detailed)
+    log_type: LogType,
 }
 
 impl Network {
@@ -119,12 +128,23 @@ impl Network {
             training_accuracies: Vec::new(),
             validation_accuracies: Vec::new(),
             test_accuracies: Vec::new(),
+            log_type: LogType::Minimal,
         }
+    }
+
+    pub fn log_more(&mut self) {
+        self.log_type = LogType::Detailed;
     }
 
     pub fn show_me(&self) {
         println!("Network with {}", self.options.display());
-        self.layers.iter().for_each(|layer| layer.show_me());
+        if self.log_type == LogType::Minimal {
+            self.layers.iter().for_each(|l| {
+                println!("Layer: {}", l.get_name());
+            });
+        } else {
+            self.layers.iter().for_each(|layer| layer.show_me());
+        }
     }
 
     fn feed_forward(&self, x: &Array2<f64>) -> Array2<f64> {
@@ -138,11 +158,7 @@ impl Network {
 
     /// Returns a vector of (nabla_w, nabla_b) of size equal to the number of layers,
     /// where each element contains the gradients for that layer.
-    fn back_propagate(
-        &self,
-        x: &Array2<f64>,
-        y: &Array2<f64>,
-    ) -> Vec<(Array2<f64>, Array2<f64>)> {
+    fn back_propagate(&self, x: &Array2<f64>, y: &Array2<f64>) -> Vec<(Array2<f64>, Array2<f64>)> {
         let n = self.layers.len();
 
         // Forward pass: collect ForwardData (z, activation) for every layer
@@ -196,7 +212,8 @@ impl Network {
         let data_size = training_data_size as f64;
 
         // parallelize backpropagation for each item in the mini-batch
-        let gradients: Vec<_> = mini_batch.par_iter()
+        let gradients: Vec<_> = mini_batch
+            .par_iter()
             .map(|item| self.back_propagate(&item.0, &item.1))
             .collect();
 
@@ -274,25 +291,16 @@ impl Network {
             .count()
     }
 
-    fn calculate_accuracy_and_log(&mut self, epoch: usize, time_taken: f64, data: &Dataset) {
-        let training_data = &data.training;
+    fn log(&mut self, epoch: usize, time_taken: f64, data: &Dataset) {
         let validation_data = &data.validation;
-        let test_data = &data.test;
-
-        let training_accuracy = self.evaluate_on_training_data(training_data) as f64
-            / training_data.len() as f64
-            * 100.0;
         let validation_accuracy = self.evaluate_on_test_data(validation_data) as f64
             / validation_data.len() as f64
             * 100.0;
-        let test_accuracy =
-            self.evaluate_on_test_data(test_data) as f64 / test_data.len() as f64 * 100.0;
 
-        self.training_accuracies.push(training_accuracy);
         let is_new_record = self.validation_accuracies.is_empty()
             || validation_accuracy > arr_max(&self.validation_accuracies);
+
         self.validation_accuracies.push(validation_accuracy);
-        self.test_accuracies.push(test_accuracy);
 
         let validation_label = if is_new_record {
             format!(
@@ -303,15 +311,36 @@ impl Network {
             format!("Validation Accuracy: {:.2}%", validation_accuracy)
         };
 
-        println!(
-            "Epoch {:03}: time = {:.3}s, Training Accuracy: {:.2}%, {}, \x1b[90m\
-            Test Accuracy: {:.2}%\x1b[0m",
-            epoch + 1,
-            time_taken,
-            training_accuracy,
-            validation_label,
-            test_accuracy
-        );
+        if self.log_type == LogType::Detailed {
+            let training_data = &data.training;
+            let test_data = &data.test;
+
+            let training_accuracy = self.evaluate_on_training_data(training_data) as f64
+                / training_data.len() as f64
+                * 100.0;
+            let test_accuracy =
+                self.evaluate_on_test_data(test_data) as f64 / test_data.len() as f64 * 100.0;
+
+            self.training_accuracies.push(training_accuracy);
+            self.test_accuracies.push(test_accuracy);
+
+            println!(
+                "Epoch {:03}: time = {:.3}s, Training Accuracy: {:.2}%, {}, \x1b[90m\
+                Test Accuracy: {:.2}%\x1b[0m",
+                epoch + 1,
+                time_taken,
+                training_accuracy,
+                validation_label,
+                test_accuracy
+            );
+        } else {
+            println!(
+                "Epoch {:03}: time = {:.3}s, {}",
+                epoch + 1,
+                time_taken,
+                validation_label
+            );
+        }
     }
 
     fn should_stop_early(&self, accuracies: &Vec<f64>, patience: usize, min_delta: f64) -> bool {
@@ -364,7 +393,7 @@ impl Network {
             });
 
             let time_taken = start.elapsed();
-            self.calculate_accuracy_and_log(epoch, time_taken.as_secs_f64(), data);
+            self.log(epoch, time_taken.as_secs_f64(), data);
 
             if stop_early
                 && self.should_stop_early(
@@ -418,7 +447,12 @@ mod tests {
     fn test_dropout_not_match() {
         let layers: Vec<Box<dyn Layer>> = vec![
             Box::new(FullyConnectedLayer::new(784, 30)),
-            Box::new(FullyConnectedLayer::with_dropout(30, 10, ActivationFn::ReLU, 0.5)),
+            Box::new(FullyConnectedLayer::with_dropout(
+                30,
+                10,
+                ActivationFn::ReLU,
+                0.5,
+            )),
         ];
         Network::new(layers, NetOptions::default());
     }
