@@ -12,6 +12,7 @@ pub mod lenet5;
 
 pub use base_layer::{Layer, ActivationFn};
 pub use mnist::load_mnist;
+pub use cifar10::load_cifar10;
 
 mod base_layer;
 mod box_muller;
@@ -22,6 +23,7 @@ mod utils;
 mod im2col;
 mod col2im;
 mod mnist;
+mod cifar10;
 
 // Suppress panic output for all tests
 #[cfg(test)]
