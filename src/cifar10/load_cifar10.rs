@@ -95,6 +95,19 @@ pub fn load_cifar10() -> std::io::Result<Dataset> {
         training: training_data,
         validation: test_data,
         test: validate_data,
+        dataset_type: DatasetType::Cifar10,
+        labels: vec![
+            "airplane",
+            "automobile",
+            "bird",
+            "cat",
+            "deer",
+            "dog",
+            "frog",
+            "horse",
+            "ship",
+            "truck",
+        ].iter().map(|s| s.to_string()).collect(),
     })
 }
 

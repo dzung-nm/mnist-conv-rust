@@ -1,11 +1,11 @@
+use byteorder::{ByteOrder, LittleEndian};
+use ndarray::{Array1, Array2};
 use std::fs::File;
 use std::fs::exists;
 use std::io::Read;
-use byteorder::{LittleEndian, ByteOrder};
-use ndarray::{Array2, Array1};
 
-use crate::types::*;
 use super::unzip::unzip;
+use crate::types::*;
 
 // Assure that you can see this folder.
 const DATA_DIR: &str = "data";
@@ -24,7 +24,10 @@ fn load_labels(file_path: &str) -> std::io::Result<LabelData> {
     // In our case [80, 195, 0, 0] means 0xC350 = 50000 labels
     let count = LittleEndian::read_u32(&buffer[0..4]);
 
-    Ok(LabelData { count, data: buffer[4..].to_vec() })
+    Ok(LabelData {
+        count,
+        data: buffer[4..].to_vec(),
+    })
 }
 
 struct ImageData {
@@ -56,7 +59,7 @@ fn load_images(file_path: &str) -> std::io::Result<ImageData> {
 
 struct MnistDataset {
     images: Array2<f64>, // shape [N, 784]
-    labels: Array1<u8>, // shape [N]
+    labels: Array1<u8>,  // shape [N]
 }
 
 fn build_dataset(name: &str) -> MnistDataset {
@@ -66,7 +69,10 @@ fn build_dataset(name: &str) -> MnistDataset {
     let labels = load_labels(&labels_path).expect("Failed to load labels");
     let images = load_images(&images_path).expect("Failed to load images");
 
-    assert_eq!(labels.count, images.count, "Labels and images counts do not match");
+    assert_eq!(
+        labels.count, images.count,
+        "Labels and images counts do not match"
+    );
 
     let images_shape = (images.count as usize, images.dims as usize);
     let labels_shape = labels.count as usize;
@@ -104,7 +110,9 @@ pub fn load_mnist() -> std::io::Result<Dataset> {
     let validation = build_dataset("validation");
     let test = build_dataset("test");
 
-    let training_formatted = training.images.outer_iter()
+    let training_formatted = training
+        .images
+        .outer_iter()
         .zip(training.labels.iter())
         .map(|(img_row, &label)| {
             let img_col = Array2::from_shape_vec((784, 1), img_row.to_vec()).unwrap();
@@ -112,7 +120,9 @@ pub fn load_mnist() -> std::io::Result<Dataset> {
         })
         .collect();
 
-    let validation_formatted = validation.images.outer_iter()
+    let validation_formatted = validation
+        .images
+        .outer_iter()
         .zip(validation.labels.iter())
         .map(|(img_row, &label)| {
             let img_col = Array2::from_shape_vec((784, 1), img_row.to_vec()).unwrap();
@@ -120,7 +130,9 @@ pub fn load_mnist() -> std::io::Result<Dataset> {
         })
         .collect();
 
-    let test_formatted = test.images.outer_iter()
+    let test_formatted = test
+        .images
+        .outer_iter()
         .zip(test.labels.iter())
         .map(|(img_row, &label)| {
             let img_col = Array2::from_shape_vec((784, 1), img_row.to_vec()).unwrap();
@@ -128,13 +140,19 @@ pub fn load_mnist() -> std::io::Result<Dataset> {
         })
         .collect();
 
-    Ok(Dataset { training: training_formatted, validation: validation_formatted, test: test_formatted })
+    Ok(Dataset {
+        training: training_formatted,
+        validation: validation_formatted,
+        test: test_formatted,
+        dataset_type: DatasetType::Mnist,
+        labels: (0..10).map(|i| i.to_string()).collect(),
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_load_mnist() {

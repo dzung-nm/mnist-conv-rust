@@ -13,6 +13,8 @@ fn main() {
         training: mnist_data.training.into_iter().take(size).collect(),
         test: mnist_data.test,
         validation: mnist_data.validation,
+        dataset_type: mnist_data.dataset_type,
+        labels: mnist_data.labels,
     };
 
     println!(

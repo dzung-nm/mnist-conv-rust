@@ -1,10 +1,12 @@
 use ndarray::Array2;
 use rand::prelude::SliceRandom;
 use rayon::prelude::*;
+use std::fs;
 use std::time::Instant;
 
 use crate::base_layer::*;
-use crate::types::{Dataset, TestItem, TrainingItem};
+use crate::images::*;
+use crate::types::*;
 use crate::utils::{arr_max, get_predicted_label, slice_max};
 
 struct NetworkSnapshot {
@@ -363,13 +365,21 @@ impl Network {
 
     fn save_checkpoint(&mut self) {
         self.checkpoint = Some(NetworkSnapshot {
-            layers: self.layers.iter().map(|l| l.clone_layer()).collect::<Vec<_>>(),
+            layers: self
+                .layers
+                .iter()
+                .map(|l| l.clone_layer())
+                .collect::<Vec<_>>(),
         });
     }
 
     fn restore_checkpoint(&mut self) {
         if let Some(snapshot) = &self.checkpoint {
-            self.layers = snapshot.layers.iter().map(|l| l.clone_layer()).collect::<Vec<_>>();
+            self.layers = snapshot
+                .layers
+                .iter()
+                .map(|l| l.clone_layer())
+                .collect::<Vec<_>>();
         }
     }
 
@@ -415,9 +425,68 @@ impl Network {
                 break;
             }
         }
+    }
 
-        // Restore the best checkpoint (if any)
+    /// Save the wrong predictions made by the network on the test data to a directory.
+    fn save_wrong_predictions(&self, data: &Dataset, results_dir: String) {
+        let mut number_wrong_items = 0;
+
+        for (i, item) in data.test.iter().enumerate() {
+            let output = self.feed_forward(&item.0);
+            let predicted_label_index = get_predicted_label(&output);
+            let actual_label_index = item.1 as usize;
+
+            if predicted_label_index != actual_label_index {
+                number_wrong_items += 1;
+                let predicted_label = &data.labels[predicted_label_index];
+                let actual_label = &data.labels[actual_label_index];
+
+                let filename = format!(
+                    "{}/{}_p_{}_{}.png",
+                    results_dir, i, predicted_label, actual_label
+                );
+
+                match data.dataset_type {
+                    DatasetType::Mnist => save_image_mnist(&item.0, &filename),
+                    DatasetType::Cifar10 => save_image_cifar10(&item.0, &filename),
+                }
+                .expect("Failed to save image");
+            }
+        }
+
+        let accuracy =
+            100.0 * (data.test.len() - number_wrong_items) as f64 / data.test.len() as f64;
+
+        println!(
+            "\nTotal wrong predictions: {} out of {}, Accuracy: {:.2}%",
+            number_wrong_items,
+            data.test.len(),
+            accuracy
+        );
+        println!("Saved wrong predictions to directory: {}", results_dir);
+    }
+
+    /// Training then restore the best checkpoint and save the wrong predictions made by the
+    /// network on the test data to a directory.
+    pub fn training_and_save_wrong_predictions(&mut self, data: &Dataset) {
+        let results_dir = format!("results/{:?}_wrong_predictions", data.dataset_type);
+
+        if fs::metadata(&results_dir).is_ok() {
+            println!(
+                "\nDirectory \x1b[92m\x1b[1m{}\x1b[0m already exists. Please remove it first.",
+                results_dir
+            );
+            return;
+        }
+
+        fs::create_dir_all(&results_dir).expect("Failed to create results directory");
+
+        self.sdg(data);
+
+        // Restore the best checkpoint
         self.restore_checkpoint();
+
+        self.save_wrong_predictions(data, results_dir);
     }
 }
 
