@@ -25,6 +25,7 @@ mod col2im;
 mod mnist;
 mod cifar10;
 mod images;
+mod transforms;
 
 // Suppress panic output for all tests
 #[cfg(test)]
