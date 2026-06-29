@@ -24,13 +24,16 @@ pub struct NetOptions {
     pub stop_early: bool,
     pub stop_early_patience: usize,
     pub stop_early_min_delta: f64,
+    pub augment_enable: bool,
+    pub augment_multiplier: usize, // Number of augmented samples per original sample
 }
 
 impl NetOptions {
     pub(crate) fn display(&self) -> String {
         format!(
             "{{ max_epochs: {}, mini_batch_size: {}, eta: {}, regularization_l1: {:?}, \
-            regularization_l2: {:?}, stop_early: {}, stop_early_patience: {}, stop_early_min_delta: {} }}",
+            regularization_l2: {:?}, stop_early: {}, stop_early_patience: {}, stop_early_min_delta: {}, \
+            enable_augmentation: {}, augment_multiplier: {} }}",
             self.max_epochs,
             self.mini_batch_size,
             self.eta,
@@ -38,7 +41,9 @@ impl NetOptions {
             self.regularization_l2,
             self.stop_early,
             self.stop_early_patience,
-            self.stop_early_min_delta
+            self.stop_early_min_delta,
+            self.augment_enable,
+            self.augment_multiplier
         )
     }
 }
@@ -54,6 +59,8 @@ impl Default for NetOptions {
             stop_early: true,
             stop_early_patience: 20,
             stop_early_min_delta: 0.1,
+            augment_enable: false,
+            augment_multiplier: 2,
         }
     }
 }
@@ -146,7 +153,7 @@ impl Network {
         println!("Network with {}", self.options.display());
         if self.log_type == LogType::Minimal {
             self.layers.iter().for_each(|l| {
-                println!("Layer: {}", l.get_name());
+                println!(" > Layer: {}", l.get_name());
             });
         } else {
             self.layers.iter().for_each(|layer| layer.show_me());
@@ -401,18 +408,54 @@ impl Network {
         let stop_early = options.stop_early;
         let stop_early_patience = options.stop_early_patience;
         let stop_early_min_delta = options.stop_early_min_delta;
+        let augment_enable = options.augment_enable;
+        let augment_multiplier = options.augment_multiplier;
 
-        let training_data = &data.training;
-        let training_data_size = training_data.len();
+        if augment_enable && data.new_augmented_data.is_none() {
+            panic!("Data augmentation is enabled, but no augmentation function is provided. \
+            Please provide a function to generate augmented data.");
+        }
 
         self.training_accuracies.clear();
         self.validation_accuracies.clear();
         self.test_accuracies.clear();
 
-        let mut indices: Vec<usize> = (0..training_data_size).collect();
+        let original_training_data = &data.training;
+
+        if augment_enable {
+            println!(
+                " > Training with on-the-fly data augmentation enabled ({}x multiplier = {} samples)",
+                augment_multiplier,
+                original_training_data.len() * augment_multiplier
+            );
+        } else {
+            println!(
+                " > Training without data augmentation ({} original training samples)",
+                original_training_data.len()
+            );
+        }
+
+        if self.pause_duration > std::time::Duration::from_secs(0) {
+            println!(
+                " > It'll pause for {:.2} seconds between epochs to avoid overheating the CPU.",
+                self.pause_duration.as_secs_f64()
+            );
+        }
 
         for epoch in 0..max_epochs {
             let start = Instant::now();
+
+            let temp: Vec<TrainingItem>;
+            let training_data = if augment_enable && data.new_augmented_data.is_some() {
+                let fn_create_augmented_data = data.new_augmented_data.unwrap();
+                temp = fn_create_augmented_data(original_training_data, augment_multiplier);
+                &temp
+            } else {
+                original_training_data
+            };
+
+            let training_data_size = training_data.len();
+            let mut indices: Vec<usize> = (0..training_data_size).collect();
 
             indices.shuffle(&mut rand::rng());
             indices.chunks(mini_batch_size).for_each(|batch_indices| {

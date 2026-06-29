@@ -22,5 +22,8 @@ pub struct Dataset {
     
     // A vector of label names corresponding to the indices of the output layer.
     // Example, for cifar 10: ["airplane", "automobile", "bird", "cat",...] 
-    pub labels: Vec<String>, 
+    pub labels: Vec<String>,
+
+    // Optional function to create augmented training data
+    pub new_augmented_data: Option<fn(&[TrainingItem], multiplier: usize) -> Vec<TrainingItem>>,
 }

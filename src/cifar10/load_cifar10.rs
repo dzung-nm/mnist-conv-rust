@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Read;
 
 use crate::types::*;
+use super::augment::new_augmented_data;
 
 // Assure that you can see this folder.
 const DATA_DIR: &str = "data/cifar10";
@@ -35,12 +36,12 @@ fn one_hot_label(label: u8) -> Array2<f64> {
 
 /// Load CIFAR-10 data.
 ///
-/// # Augments 
+/// # Augments
 /// * `max_training_item` - valid range is 10000 to 50000.
 pub fn load_cifar10(max_training_item: usize) -> std::io::Result<Dataset> {
     let num_training_items = max_training_item.clamp(10000, 50000);
     let num_batches = (num_training_items - 1) / 10000 + 1;
-    
+
     // Load training data from data_batch_1.bin to data_batch_5.bin
     let training_data: Vec<TrainingItem> = (1..=num_batches)
         .map(|i| format!("{}/data_batch_{}.bin", DATA_DIR, i))
@@ -114,7 +115,11 @@ pub fn load_cifar10(max_training_item: usize) -> std::io::Result<Dataset> {
             "horse",
             "ship",
             "truck",
-        ].iter().map(|s| s.to_string()).collect(),
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect(),
+        new_augmented_data: Some(new_augmented_data),
     })
 }
 

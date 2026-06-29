@@ -5,6 +5,7 @@ use std::fs::exists;
 use std::io::Read;
 
 use super::unzip::unzip;
+use super::augment::new_augmented_data;
 use crate::types::*;
 
 // Assure that you can see this folder.
@@ -153,6 +154,7 @@ pub fn load_mnist(max_training_item: usize) -> std::io::Result<Dataset> {
         test: test_formatted,
         dataset_type: DatasetType::Mnist,
         labels: (0..10).map(|i| i.to_string()).collect(),
+        new_augmented_data: Some(new_augmented_data),
     })
 }
 
