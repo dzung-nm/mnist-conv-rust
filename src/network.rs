@@ -455,7 +455,8 @@ impl Network {
             let temp: Vec<TrainingItem>;
             let training_data = if augment_enable && data.new_augmented_data.is_some() {
                 let fn_create_augmented_data = data.new_augmented_data.unwrap();
-                temp = fn_create_augmented_data(original_training_data, augment_multiplier);
+                let augmented_refs: Vec<&TrainingItem> = original_training_data.iter().collect();
+                temp = fn_create_augmented_data(augmented_refs, augment_multiplier);
                 &temp
             } else {
                 original_training_data

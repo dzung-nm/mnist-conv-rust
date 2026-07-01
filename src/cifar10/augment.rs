@@ -8,7 +8,7 @@ use crate::types::TrainingItem;
 ///  * `origin' - The original dataset to augment.
 ///  * `multiplier` - The number of times to augment the data
 ///     (This number should not be greater than the number of transforms we have)
-pub fn new_augmented_data(origin: &[TrainingItem], multiplier: usize) -> Vec<TrainingItem> {
+pub fn new_augmented_data(origin: Vec<&TrainingItem>, multiplier: usize) -> Vec<TrainingItem> {
     if multiplier < 1 || multiplier > 3 {
         panic!("Augmented Multiplier must be between 1 and 3, but got {}", multiplier);
     }
@@ -17,7 +17,7 @@ pub fn new_augmented_data(origin: &[TrainingItem], multiplier: usize) -> Vec<Tra
     let mut rng = rand::rng();
 
     for _ in 0..multiplier {
-        for item in origin {
+        for item in &origin {
             let image_flat = item.0.clone().into_flat().to_vec();
             let image_3d = Array3::from_shape_vec((3, 32, 32), image_flat).unwrap();
 

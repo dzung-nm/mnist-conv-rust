@@ -25,5 +25,5 @@ pub struct Dataset {
     pub labels: Vec<String>,
 
     // Optional function to create augmented training data
-    pub new_augmented_data: Option<fn(&[TrainingItem], multiplier: usize) -> Vec<TrainingItem>>,
+    pub new_augmented_data: Option<fn(Vec<&TrainingItem>, multiplier: usize) -> Vec<TrainingItem>>,
 }
